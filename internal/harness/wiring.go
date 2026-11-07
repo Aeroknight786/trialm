@@ -105,6 +105,7 @@ func OpenCodeConfig(o Options) (map[string]any, string) {
 			"models":  map[string]any{o.Model: model},
 		}},
 	}
+	cfg["model"] = id + "/" + o.Model // OpenCode 2.x picks the model only from config
 	if o.Tuned {
 		cfg["agent"] = map[string]any{"title": map[string]bool{"disable": true}}
 	}

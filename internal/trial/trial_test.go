@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -44,7 +45,7 @@ func TestNoLoggingProviderPinned(t *testing.T) {
 		p    Policy
 		want string
 	}{{Policy{Tools: true, Context: 65536, Quant: "Q4_K_M"}, "private/fp8"}, {Policy{Tools: true, Context: 65536, Quant: "Q8_0"}, "zdr/bf16"}, {Policy{Tools: true, ZDR: true, Context: 65536, Quant: "Q4_K_M"}, "zdr/bf16"}, {Policy{Tools: true, Context: 65536, Provider: "logging/fp8"}, ""}, {Policy{Tools: true, Context: 65536, Provider: "unknown/fp8"}, ""}, {Policy{Tools: true, Context: 262144}, ""}, {Policy{Tools: true, Context: 65536, Provider: "private/fp8,zdr/bf16", ZDR: true}, "zdr/bf16"}} {
-		e, err := Select(eps, tc.p)
+		e, err := selectOne(eps, tc.p)
 		if tc.want == "" {
 			if err == nil {
 				t.Fatal("unsafe endpoint selected", e)
@@ -54,10 +55,20 @@ func TestNoLoggingProviderPinned(t *testing.T) {
 		if err != nil || e.Tag != tc.want {
 			t.Fatal(tc, e, err)
 		}
-		policy := Provider(e, tc.p.ZDR)
+		policy := Provider([]openrouter.Endpoint{e}, tc.p.ZDR)
 		if policy["data_collection"] != "deny" || policy["allow_fallbacks"] != false || policy["require_parameters"] != true {
 			t.Fatal(policy)
 		}
+	}
+	// Several private endpoints: OpenRouter tries them in order and never leaves the list.
+	ranked, err := Ranked(fixture(t), Policy{Tools: true})
+	if err != nil || len(ranked) < 2 {
+		t.Fatal(ranked, err)
+	}
+	policy := Provider(ranked[:2], false)
+	tags := []string{ranked[0].Tag, ranked[1].Tag}
+	if !reflect.DeepEqual(policy["order"], tags) || !reflect.DeepEqual(policy["only"], tags) || policy["allow_fallbacks"] != true || policy["data_collection"] != "deny" {
+		t.Fatal(policy)
 	}
 }
 func TestEndpointHTTPShapeAndAttribution(t *testing.T) {
@@ -97,7 +108,7 @@ func TestBudgetUsageAndConcurrency(t *testing.T) {
 	}))
 	defer fake.Close()
 	e := fixture(t)[2]
-	client := &upstream.OpenAICompat{BaseURL: fake.URL, Model: "test", Extra: map[string]any{"provider": Provider(e, false)}}
+	client := &upstream.OpenAICompat{BaseURL: fake.URL, Model: "test", Extra: map[string]any{"provider": Provider([]openrouter.Endpoint{e}, false)}}
 	b := NewBudget(client, Rates{Completion: 1}, 2)
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
@@ -132,6 +143,17 @@ func TestBudgetCachedUsageAndFailClosed(t *testing.T) {
 	if math.Abs(b.Spent()-.078) > 1e-9 {
 		t.Fatal(b.Spent())
 	}
+	// OpenRouter's own charge wins over the admission rates (a fallback may be cheaper).
+	charged := .0004
+	b = NewBudget(&scriptClient{events: []llm.Event{{Type: llm.EventDone, Usage: &llm.Usage{PromptTokens: 100, CostUSD: &charged}}}}, Rates{Prompt: .001}, 2)
+	if events, err = b.Stream(context.Background(), &llm.Request{}); err != nil {
+		t.Fatal(err)
+	}
+	for range events {
+	}
+	if b.Spent() != charged {
+		t.Fatal(b.Spent())
+	}
 	unknown := NewBudget(&scriptClient{events: []llm.Event{{Type: llm.EventDone}}}, Rates{}, 2)
 	events, err = unknown.Stream(context.Background(), &llm.Request{})
 	if err != nil {
@@ -147,6 +169,14 @@ func TestBudgetCachedUsageAndFailClosed(t *testing.T) {
 			t.Fatal(price)
 		}
 	}
+}
+
+func selectOne(eps []openrouter.Endpoint, p Policy) (openrouter.Endpoint, error) {
+	ranked, err := Ranked(eps, p)
+	if err != nil {
+		return openrouter.Endpoint{}, err
+	}
+	return ranked[0], nil
 }
 
 type scriptClient struct{ events []llm.Event }
@@ -249,11 +279,11 @@ func TestPublicEndpointPrivacyJoin(t *testing.T) {
 	if eps[4].ZDR {
 		t.Fatal("wrong model joined", eps[4])
 	}
-	e, err := Select(eps, Policy{Tools: true, Context: 65536, ZDR: true, Provider: "logging/fp8"})
+	e, err := selectOne(eps, Policy{Tools: true, Context: 65536, ZDR: true, Provider: "logging/fp8"})
 	if err == nil {
 		t.Fatal("logging endpoint pinned", e)
 	}
-	e, err = Select(eps, Policy{Tools: true, Context: 65536, ZDR: true, Provider: "unknown/fp8"})
+	e, err = selectOne(eps, Policy{Tools: true, Context: 65536, ZDR: true, Provider: "unknown/fp8"})
 	if err != nil || e.Tag != "unknown/fp8" {
 		t.Fatal(e, err)
 	}

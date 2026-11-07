@@ -42,6 +42,17 @@ func decodeObject(t *testing.T, content string) map[string]any {
 	return v
 }
 
+// Tests describe OpenCode 1.x unless they say otherwise, whatever is installed.
+func init() { OpenCode2 = func() bool { return false } }
+
+func TestMajorVersion(t *testing.T) {
+	for out, want := range map[string]int{"opencode v2.2.0\n": 2, "v2.10.1": 2, "1.19.5\n": 1, "": 0, "unknown": 0} {
+		if got := majorVersion(out); got != want {
+			t.Errorf("%q: %d, want %d", out, got, want)
+		}
+	}
+}
+
 func TestSetupForEveryHarness(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("TRIALM_HOME", home)
@@ -96,9 +107,15 @@ func TestSetupForEveryHarness(t *testing.T) {
 					if cfg["agent"].(map[string]any)["title"].(map[string]any)["disable"] != true {
 						t.Error("title enabled")
 					}
-					if !reflect.DeepEqual(s.Command, []string{"opencode", "--model", "trialm/test:model"}) {
+					if cfg["model"] != "trialm/test:model" || !reflect.DeepEqual(s.Command, []string{"opencode", "--model", "trialm/test:model"}) {
 						t.Errorf("command: %v", s.Command)
 					}
+					// 2.x: a private server that reads our config, and the model from it.
+					OpenCode2 = func() bool { return true }
+					if s2 := h.SetupFor(Options{Port: 12345, Model: "test:model", Protocol: proto, Tuned: true}); !reflect.DeepEqual(s2.Command, []string{"opencode", "--standalone"}) || !strings.Contains(strings.Join(s2.Notes, " "), "opencode run --standalone -m trialm/test:model") {
+						t.Errorf("2.x: %+v", s2)
+					}
+					OpenCode2 = func() bool { return false }
 				case "aider":
 					cmd := strings.Join(s.Command, " ")
 					if proto == "ollama" {
@@ -197,7 +214,7 @@ func TestSetupModesAndLimits(t *testing.T) {
 		s := h.SetupFor(Options{Port: 12345, Model: `model"with'quotes`, ContextTokens: ctx, Bridge: true})
 		cfg := envMap(s)["OPENCODE_CONFIG_CONTENT"]
 		decodeObject(t, cfg)
-		if strings.Contains(cfg, "simulated") || s.Command[2] != `trialm-local/model"with'quotes` {
+		if strings.Contains(cfg, "simulated") || decodeObject(t, cfg)["model"] != `trialm-local/model"with'quotes` {
 			t.Errorf("bridge label: %+v", s)
 		}
 	}

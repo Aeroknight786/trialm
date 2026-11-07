@@ -160,6 +160,8 @@ type Usage struct {
 	ReasoningTokens    int  `json:"reasoning_tokens,omitempty"`
 	CachedPromptTokens int  `json:"cached_prompt_tokens,omitempty"`
 	CacheKnown         bool `json:"cache_known,omitempty"`
+	// CostUSD is the upstream's own charge for the request (OpenRouter), nil if not reported.
+	CostUSD *float64 `json:"cost_usd,omitempty"`
 }
 
 // Timings are the simulated local-runtime timings of one request. Frontends

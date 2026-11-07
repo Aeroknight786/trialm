@@ -104,6 +104,11 @@ func TestBuildBodyAndErrors(t *testing.T) {
 		t.Fatalf("expected HTTP error with message, got %v", err)
 	}
 	_ = he
+	// OpenRouter hides a provider's reason in metadata.raw; show it.
+	body := `{"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"error\":{\"message\":\"at most 64 tools are allowed\"}}","provider_name":"Darkbloom"}}}`
+	if got := (&HTTPError{Status: 400, Body: body}).Error(); got != "upstream returned HTTP 400: Provider returned error (Darkbloom: at most 64 tools are allowed)" {
+		t.Fatal(got)
+	}
 }
 
 func TestReasoningAndRequireParameters(t *testing.T) {

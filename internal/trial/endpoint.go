@@ -20,7 +20,8 @@ type Policy struct {
 	Provider, Quant string
 }
 
-func Select(endpoints []openrouter.Endpoint, p Policy) (openrouter.Endpoint, error) {
+// Ranked lists the endpoints that meet the policy, best first.
+func Ranked(endpoints []openrouter.Endpoint, p Policy) ([]openrouter.Endpoint, error) {
 	var eligible []openrouter.Endpoint
 	for _, e := range endpoints {
 		policy := e.DataCollection
@@ -48,7 +49,7 @@ func Select(endpoints []openrouter.Endpoint, p Policy) (openrouter.Endpoint, err
 		eligible = append(eligible, e)
 	}
 	if len(eligible) == 0 {
-		return openrouter.Endpoint{}, fmt.Errorf("no no-logging endpoint meets this trial's context, tools and privacy requirements; use --privacy predict-only or choose another model")
+		return nil, fmt.Errorf("no no-logging endpoint meets this trial's context, tools and privacy requirements; use --privacy predict-only or choose another model")
 	}
 	sort.SliceStable(eligible, func(i, j int) bool {
 		a, b := eligible[i], eligible[j]
@@ -69,7 +70,7 @@ func Select(endpoints []openrouter.Endpoint, p Policy) (openrouter.Endpoint, err
 		pb, _ := Prices(b.Pricing)
 		return pa.Prompt+pa.Completion < pb.Prompt+pb.Completion
 	})
-	return eligible[0], nil
+	return eligible, nil
 }
 func has(ss []string, s string) bool { return slices.Contains(ss, s) }
 func precisionRank(precision, quant string) int {
@@ -96,8 +97,16 @@ func precisionRank(precision, quant string) int {
 	}
 	return 3
 }
-func Provider(e openrouter.Endpoint, zdr bool) map[string]any {
-	p := map[string]any{"only": []string{e.Tag}, "data_collection": "deny", "allow_fallbacks": false, "require_parameters": true}
+
+// Provider routes to the given endpoints, best first. When one rejects a
+// request (one caps tools at 64, for example) OpenRouter tries another, and
+// "only" keeps every attempt on this private list.
+func Provider(endpoints []openrouter.Endpoint, zdr bool) map[string]any {
+	var tags []string
+	for _, e := range endpoints {
+		tags = append(tags, e.Tag)
+	}
+	p := map[string]any{"order": tags, "only": tags, "data_collection": "deny", "allow_fallbacks": len(tags) > 1, "require_parameters": true}
 	if zdr {
 		p["zdr"] = true
 	}
@@ -105,6 +114,20 @@ func Provider(e openrouter.Endpoint, zdr bool) map[string]any {
 }
 
 type Rates struct{ Prompt, Completion, CacheRead, Request float64 }
+
+// MaxPrices takes the dearest of each price, so a budget holds on whichever
+// endpoint answers.
+func MaxPrices(endpoints []openrouter.Endpoint) (Rates, error) {
+	var m Rates
+	for _, e := range endpoints {
+		r, err := Prices(e.Pricing)
+		if err != nil {
+			return m, err
+		}
+		m = Rates{max(m.Prompt, r.Prompt), max(m.Completion, r.Completion), max(m.CacheRead, r.CacheRead), max(m.Request, r.Request)}
+	}
+	return m, nil
+}
 
 func Prices(p openrouter.Price) (Rates, error) {
 	var r Rates

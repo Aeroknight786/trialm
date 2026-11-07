@@ -269,6 +269,16 @@ func (c *OpenAICompat) Stream(ctx context.Context, req *llm.Request) (<-chan llm
 	return out, nil
 }
 
+type apiError struct {
+	Error struct {
+		Message  string
+		Metadata struct {
+			Raw      string
+			Provider string `json:"provider_name"`
+		}
+	}
+}
+
 // HTTPError is a non-200 upstream response.
 type HTTPError struct {
 	Status int
@@ -277,13 +287,13 @@ type HTTPError struct {
 
 func (e *HTTPError) Error() string {
 	msg := e.Body
-	var parsed struct {
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}
+	var parsed, raw apiError
 	if json.Unmarshal([]byte(e.Body), &parsed) == nil && parsed.Error.Message != "" {
 		msg = parsed.Error.Message
+		// OpenRouter's "Provider returned error" keeps the provider's reason in metadata.raw.
+		if m := parsed.Error.Metadata; json.Unmarshal([]byte(m.Raw), &raw) == nil && raw.Error.Message != "" {
+			msg += " (" + strings.TrimPrefix(m.Provider+": ", ": ") + raw.Error.Message + ")"
+		}
 	}
 	return fmt.Sprintf("upstream returned HTTP %d: %s", e.Status, msg)
 }
@@ -306,8 +316,9 @@ type chunk struct {
 		FinishReason *string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
-		PromptTokens        int `json:"prompt_tokens"`
-		CompletionTokens    int `json:"completion_tokens"`
+		PromptTokens        int      `json:"prompt_tokens"`
+		CompletionTokens    int      `json:"completion_tokens"`
+		Cost                *float64 `json:"cost"` // OpenRouter: the request's actual charge in USD
 		PromptTokensDetails *struct {
 			CachedTokens *int `json:"cached_tokens"`
 		} `json:"prompt_tokens_details"`
@@ -398,7 +409,7 @@ func parseSSE(ctx context.Context, r io.Reader, out chan<- llm.Event, onLine fun
 			}
 		}
 		if ch.Usage != nil {
-			u := llm.Usage{PromptTokens: ch.Usage.PromptTokens, CompletionTokens: ch.Usage.CompletionTokens}
+			u := llm.Usage{PromptTokens: ch.Usage.PromptTokens, CompletionTokens: ch.Usage.CompletionTokens, CostUSD: ch.Usage.Cost}
 			if usage != nil {
 				u.CachedPromptTokens, u.CacheKnown = usage.CachedPromptTokens, usage.CacheKnown
 			}

@@ -529,12 +529,13 @@ func cmdServe(args []string, try bool) error {
 			if e != nil {
 				return e
 			}
-			endpoint, e := trial.Select(endpoints, trial.Policy{ZDR: *zdr, Tools: c.prefs.Use != "chat", Context: res.Settings.ContextTokens, Provider: *provider, Quant: res.Quant.Name})
+			ranked, e := trial.Ranked(endpoints, trial.Policy{ZDR: *zdr, Tools: c.prefs.Use != "chat", Context: res.Settings.ContextTokens, Provider: *provider, Quant: res.Quant.Name})
 			if e != nil {
 				return needs("--privacy predict-only", e.Error())
 			}
-			uc.Extra = map[string]any{"provider": trial.Provider(endpoint, *zdr)}
-			rates, e := trial.Prices(endpoint.Pricing)
+			endpoint, ranked := ranked[0], ranked[:min(3, len(ranked))]
+			uc.Extra = map[string]any{"provider": trial.Provider(ranked, *zdr)}
+			rates, e := trial.MaxPrices(ranked)
 			if e != nil {
 				return e
 			}

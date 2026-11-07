@@ -99,6 +99,9 @@ func (b *Budget) Stream(ctx context.Context, req *llm.Request) (<-chan llm.Event
 				u := ev.Usage
 				cached := max(0, min(u.CachedPromptTokens, u.PromptTokens))
 				cost := float64(max(0, u.PromptTokens-cached))*b.Rates.Prompt + float64(cached)*b.Rates.CacheRead + float64(max(0, u.CompletionTokens))*b.Rates.Completion + b.Rates.Request
+				if u.CostUSD != nil {
+					cost = *u.CostUSD // whichever provider answered, its own charge
+				}
 				b.mu.Lock()
 				b.spent += cost
 				over := b.spent >= b.Limit

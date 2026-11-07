@@ -4,6 +4,7 @@
 package harness
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aeroknight786/trialm/internal/predict"
@@ -122,6 +124,23 @@ func Get(id string) (Harness, error) {
 	}
 	sort.Strings(ids)
 	return Harness{}, fmt.Errorf("unknown harness %q (known: %s)", id, strings.Join(ids, ", "))
+}
+
+// OpenCode2 reports whether the installed OpenCode is 2.x or later. A
+// variable so tests can pin it.
+var OpenCode2 = sync.OnceValue(func() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, _ := exec.CommandContext(ctx, FindBinary("opencode"), "--version").Output()
+	return majorVersion(string(out)) >= 2
+})
+
+// majorVersion reads "opencode v2.2.0", "v2.2.0" or "1.19.5" as 2, 2 or 1; 0 if none.
+func majorVersion(out string) (major int) {
+	if f := strings.Fields(out); len(f) > 0 {
+		fmt.Sscanf(strings.TrimPrefix(f[len(f)-1], "v"), "%d", &major)
+	}
+	return major
 }
 
 // CodexCommand is the codex command line that talks to a Responses
@@ -256,11 +275,18 @@ func (h Harness) SetupFor(o Options) Setup {
 		s.Env = [][2]string{{"OPENCODE_CONFIG_CONTENT", compactJSON(cfg)}, {"OPENCODE_DISABLE_MODELS_FETCH", "1"}}
 		s.ConfigPath = "~/.config/opencode/opencode.json"
 		s.Config = prettyJSON(cfg)
+		run := "opencode run --model "
 		s.Command = []string{"opencode", "--model", id + "/" + m}
+		if OpenCode2() {
+			// 2.x has no --model on its main screen and talks to a shared
+			// background server that never sees our config; a private server
+			// does, and the config's "model" picks the trial model.
+			s.Command, run = []string{"opencode", "--standalone"}, "opencode run --standalone -m "
+		}
 		if o.Tuned {
 			s.Notes = append(s.Notes, "Title generation is off: on a single-slot local runtime it costs an extra prefill and evicts the prompt cache.")
 		}
-		s.Notes = append(s.Notes, `Headless: opencode run --model `+id+`/`+m+` "<task>" < /dev/null`)
+		s.Notes = append(s.Notes, `Headless: `+run+id+`/`+m+` "<task>" < /dev/null`)
 	case "aider":
 		if o.Protocol == "openai-chat" {
 			s.Env = [][2]string{{"OPENAI_API_BASE", base + "/v1"}, {"OPENAI_API_KEY", "local"}}
