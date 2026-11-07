@@ -151,7 +151,7 @@ func Run(ctx context.Context, o RunOptions) (*Calibration, error) {
 		args := s.Args(path, o.CPUOnly)
 		loadMode := "mlock"
 		measure := func() error {
-			emit("step", i+1, p, "Benchmarking "+strings.Join(args[2:], " "))
+			emit("step", i+1, p, "Measuring a synthetic file")
 			return runBench(ctx, o.Engine, args, func(raw json.RawMessage, b BenchRow) error {
 				if !o.CPUOnly && (b.GPULayers == 0 || strings.TrimSpace(b.GPU) == "") {
 					return errors.New("llama-bench did not use a GPU; no GPU calibration was saved")
