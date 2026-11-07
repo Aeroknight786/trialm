@@ -4,8 +4,8 @@
 [36m│[m [1;36mDownloads[m                                              [36m│[m
 [36m│[m                                                        [36m│[m
 [36m│[m [33m2 Other Models Loaded | Expect Slower Speeds[m           [36m│[m
-[36m│[m [90mllama-server · 7.52 GB memory[m                          [36m│[m
-[36m│[m [90mOllama · 6.44 GB memory[m                                [36m│[m
+[36m│[m [90mllama-server · qwen3.5:9b[m                              [36m│[m
+[36m│[m [90mOllama[m                                                 [36m│[m
 [36m╰────────────────────────────────────────────────────────╯[m
 
 [90m⏎ Now   s Later (run trialm calibrate)   v Details[m

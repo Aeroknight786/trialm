@@ -34,15 +34,17 @@ type setupEvent struct {
 	done    bool
 }
 type setupView struct {
-	plan    setup.Plan
-	journal setup.Journal
-	report  *verify.Report
-	update  setup.Update
-	states  map[int]string
-	logs    []string
-	events  chan setupEvent
-	cancel  context.CancelFunc
-	onDisk  bool
+	plan                   setup.Plan
+	journal                setup.Journal
+	report                 *verify.Report
+	update                 setup.Update
+	states                 map[int]string
+	logs                   []string
+	events                 chan setupEvent
+	cancel                 context.CancelFunc
+	onDisk                 bool
+	checkStarted, checkNow time.Time
+	subCheck               string
 }
 
 func (m *Root) planSetup() tea.Cmd {
@@ -64,7 +66,6 @@ func (m *Root) planSetup() tea.Cmd {
 	if !ok || m.cfg.Plan == nil {
 		return nil
 	}
-	m.autoLaunch = m.screen() == Home || (m.firstRun && row.LocalPath != "")
 	m.push(Setup)
 	m.busy = true
 	m.setup = setupView{states: map[int]string{}, onDisk: row.LocalPath != ""}
@@ -80,6 +81,7 @@ func (m *Root) planSetup() tea.Cmd {
 }
 func (m *Root) applySetup() tea.Cmd {
 	ctx, cancel := context.WithCancel(m.cfg.Context)
+	m.setup.checkStarted = time.Time{}
 	m.setup.cancel = cancel
 	m.setup.events = make(chan setupEvent, 32)
 	events := m.setup.events
@@ -100,6 +102,7 @@ func (m *Root) nextSetup() tea.Cmd {
 func (m *Root) setupEvent(v setupEvent) tea.Cmd {
 	if v.done {
 		m.busy = false
+		m.setup.checkStarted = time.Time{}
 		m.setup.cancel = nil
 		m.setup.journal = v.journal
 		if v.journal.Report != nil {
@@ -141,10 +144,18 @@ func (m *Root) setupEvent(v setupEvent) tea.Cmd {
 			m.setup.update = u
 			m.setup.states[u.Index] = u.State
 		}
+		if u.Kind == setup.Check && u.State == "running" && m.setup.checkStarted.IsZero() {
+			m.setup.checkStarted = time.Now()
+			m.setup.checkNow = m.setup.checkStarted
+			m.setup.subCheck = "Writing"
+			return tea.Batch(m.nextSetup(), tea.Tick(time.Second, func(t time.Time) tea.Msg { return pulseMsg(t) }))
+		}
 		m.setup.logs = append(m.setup.logs, u.Lines...)
 		if len(m.setup.logs) > 5 {
 			m.setup.logs = m.setup.logs[len(m.setup.logs)-5:]
 		}
+	case "setup_check":
+		m.setup.subCheck, _ = v.event.Data.(string)
 	case "setup_ready":
 		m.setup.report, _ = v.event.Data.(*verify.Report)
 	}
@@ -186,6 +197,19 @@ func (m *Root) setupBody() string {
 	if !m.busy && m.setup.journal.State != "ready" {
 		b += "\nInstall? " + p.CountsLine(m.setup.onDisk) + "\n"
 	}
+	if p.Prompts.Passwords > 0 {
+		b += "\nNeeds your Mac password once\n"
+	}
+	checkSuffix := ""
+	if m.busy && !m.setup.checkStarted.IsZero() {
+		left := core.ReadyDuration(p) - m.setup.checkNow.Sub(m.setup.checkStarted)
+		seconds := int(math.Ceil(max(time.Minute, left).Seconds()))
+		checkSuffix += fmt.Sprintf(" · About %d min", seconds/60)
+		if seconds%60 != 0 {
+			checkSuffix += fmt.Sprintf(" %d s", seconds%60)
+		}
+		checkSuffix += " left"
+	}
 	line := func(title, state string) {
 		mark := "·"
 		if state == "done" {
@@ -195,14 +219,25 @@ func (m *Root) setupBody() string {
 		}
 		b += "\n" + mark + " " + title
 	}
+	checkLine := func(title, state string) {
+		line(title+checkSuffix, state)
+		if m.busy && state == "running" {
+			b += "\n  " + m.theme.dim.Render(m.setup.subCheck)
+		}
+	}
 	if m.expanded {
+		if m.setup.onDisk {
+			line("Model already on disk", "done")
+		}
 		for i, s := range p.Steps {
 			if s.Kind == setup.Check {
 				if warning := m.modelWarning(); warning != "" {
 					b += "\n\n" + warning
 				}
+				checkLine(s.Description(true), m.setup.states[i+1])
+			} else {
+				line(s.Description(true), m.setup.states[i+1])
 			}
-			line(s.Description(true), m.setup.states[i+1])
 		}
 		b += "\n" + strings.Join(append(append([]string{}, m.setup.logs...), p.Warnings...), "\n")
 		return m.card(b)
@@ -242,7 +277,9 @@ func (m *Root) setupBody() string {
 			line(s.Title, state)
 		}
 	}
-	if hasDownload {
+	if m.setup.onDisk {
+		line("Model already on disk", "done")
+	} else if hasDownload {
 		line("Download the model", download)
 		if u := m.setup.update; u.Kind == setup.Fetch && u.Progress != nil && u.Progress.Total > 0 {
 			progress := u.Progress
@@ -254,7 +291,7 @@ func (m *Root) setupBody() string {
 	if warning := m.modelWarning(); warning != "" {
 		b += "\n\n" + warning
 	}
-	line("Check speed", checked)
+	checkLine("Check speed", checked)
 	if m.setup.journal.State == "paused" {
 		b += "\n" + m.setup.journal.Summary()
 	}

@@ -116,29 +116,29 @@ type windowDoneMsg struct{ err error }
 
 // Root owns every screen and sub-model for the entire interactive session.
 type Root struct {
-	otherModels                               []hw.ModelServer
-	gridFocus                                 bool
-	picker                                    core.ConfigPicker
-	agents                                    []core.AgentChoice
-	agentIndex                                int
-	firstRun                                  bool
-	cfg                                       Config
-	setup                                     setupView
-	models                                    []core.ModelChoice
-	modelIndex                                int
-	detecting, detected, expanded, autoLaunch bool
-	sparkle                                   int
-	rawError                                  string
-	pendingTrial                              bool
-	trialRow                                  *core.Row
-	trialWindow                               bool
-	address                                   string
-	stack                                     []Screen
-	width, height                             int
-	theme                                     palette
-	detection                                 core.Detection
-	listing                                   core.Listing
-	selected                                  int
+	otherModels                   []hw.ModelServer
+	gridFocus                     bool
+	picker                        core.ConfigPicker
+	agents                        []core.AgentChoice
+	agentIndex                    int
+	firstRun                      bool
+	cfg                           Config
+	setup                         setupView
+	models                        []core.ModelChoice
+	modelIndex                    int
+	detecting, detected, expanded bool
+	sparkle                       int
+	rawError                      string
+	pendingTrial                  bool
+	trialRow                      *core.Row
+	trialWindow                   bool
+	address                       string
+	stack                         []Screen
+	width, height                 int
+	theme                         palette
+	detection                     core.Detection
+	listing                       core.Listing
+	selected                      int
 
 	secret          string
 	password        *huh.Input
@@ -382,9 +382,6 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.sparkle < 3 {
 			return m, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg { return sparkleMsg(int(v) + 1) })
 		}
-		if m.autoLaunch && m.screen() == Ready {
-			return m, m.launchSetup(m.setup.journal)
-		}
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spin, cmd = m.spin.Update(v)
@@ -525,7 +522,6 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.busy = false
 		if (v.kind == Launching || v.kind == Setup) && v.err == nil {
 			m.stack = []Screen{Home}
-			m.autoLaunch = false
 			return m, m.loadModels()
 		}
 		if v.err != nil {
@@ -566,13 +562,14 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.calibration.Record(v.event, time.Now())
 		return m, m.calibration.next()
 	case pulseMsg:
+		m.setup.checkNow = time.Time(v)
 		if m.calibration != nil {
 			m.calibration.Tick(time.Time(v))
 		}
 		if m.screen() == Trial {
 			m.meter = window.ReadMeter(m.cfg.Store)
 		}
-		if m.calibration != nil || m.screen() == Trial {
+		if m.calibration != nil || m.screen() == Trial || (m.busy && !m.setup.checkStarted.IsZero()) {
 			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return pulseMsg(t) })
 		}
 	case tea.PasteMsg:
@@ -801,7 +798,6 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if choice.Journal != nil {
 					return m, m.launchSetup(*choice.Journal)
 				}
-				m.autoLaunch = true
 				return m, m.planSetup()
 			case "up", "k":
 				m.modelIndex = max(0, m.modelIndex-1)

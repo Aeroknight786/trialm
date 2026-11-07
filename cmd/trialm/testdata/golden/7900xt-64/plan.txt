@@ -1,6 +1,6 @@
 
 Setup plan Qwen3.6 35B-A3B · Q4_K_M · Ollama
-1 approval · 0 OS password prompts · 23.7 GB download
+Install? 23.7 GB
 65536 tokens · f16 · http://127.0.0.1:11434
 1/9 check · Check zstd is installed for the Ollama archive
   argv ["zstd" "--version"]

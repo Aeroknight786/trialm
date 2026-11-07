@@ -8,8 +8,11 @@ import (
 	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/predict"
+	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/store"
+	"github.com/aeroknight786/trialm/internal/verify"
 	"testing"
+	"time"
 )
 
 func gridFixture(t *testing.T) (catalog.Model, engine.Profile, predict.Target, predict.Scenario) {
@@ -47,6 +50,17 @@ func TestConfigTables(t *testing.T) {
 				evidence = &calib.Calibration{Rows: []calib.Row{{Probe: "real", Quant: q.Name, Depth: 65536, Seconds: 1. / 9, Raw: raw}}}
 			}
 			g := BuildConfigGrid(m, rt, "f16", target, sc, local, evidence)
+			largest := 0
+			for _, file := range g.Files {
+				for _, cell := range file.Cells {
+					if cell.Fits {
+						largest = max(largest, cell.Context)
+					}
+				}
+			}
+			if g.MaxContext != largest {
+				t.Fatalf("list context %d has no fitting grid cell %d", g.MaxContext, largest)
+			}
 			g8 := BuildConfigGrid(m, rt, "q8_0", target, sc, local, evidence)
 			switch name {
 			case "small cache only":
@@ -137,5 +151,29 @@ func TestLMStudioPickerSetupRefusesUncontrolledCache(t *testing.T) {
 		if err == nil {
 			t.Fatal("accepted an engine whose selected cache cannot be enforced", id)
 		}
+	}
+}
+
+func TestReadyDurationUsesPlanRatesAndSamples(t *testing.T) {
+	p := setup.Plan{ContextTokens: 32768, Harness: "claude-code", Predicted: verify.Predicted{DecodeTPS0: 22, DecodeTPSTarget: 15, PrefillTPS: 396}}
+	if got := ReadyDuration(p); got != 2*time.Minute {
+		t.Fatal(got)
+	}
+	p.Predicted.PrefillTPS = 150
+	if got := ReadyDuration(p); got != 4*time.Minute {
+		t.Fatal(got)
+	}
+	p.ContextTokens = 8192
+	if got := ReadyDuration(p); got != time.Minute {
+		t.Fatal("duplicate 8K sample", got)
+	}
+	p.ContextTokens = 131072
+	if got := ReadyDuration(p); got <= 4*time.Minute {
+		t.Fatal("deep sample missing", got)
+	}
+	p.BitsPerWeight = 2
+	p.Predicted.DecodeTPS0 = 2
+	if got := ReadyDuration(p); got <= 20*time.Minute {
+		t.Fatal("tool samples missing", got)
 	}
 }

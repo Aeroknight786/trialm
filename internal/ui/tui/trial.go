@@ -46,7 +46,7 @@ func (m *Root) summaryBody() string {
 		cost = "$" + fmt.Sprintf("%.2f", r.SpendUSD)
 	}
 	values := []string{fmt.Sprint(r.Requests), figure.Band(r.TypicalTurn, m.last.Band, "s", figure.Simulated, "trial:observed").String(), figure.Band(r.SlowestTurn, m.last.Band, "s", figure.Simulated, "trial:observed").String(), cost}
-	b += m.tiles([]string{"Replies", "Typical reply", "Slowest", "Cost"}, values, nil) + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\n" + m.card("Install? "+size.String()+" · 1 approval")
+	b += m.tiles([]string{"Replies", "Typical reply", "Slowest", "Cost"}, values, nil) + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\n" + m.card("Install? "+size.String())
 	if m.expanded {
 		b += "\n" + r.Plain(m.last.Band)
 	}

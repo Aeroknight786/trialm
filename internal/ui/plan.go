@@ -13,7 +13,10 @@ import (
 
 func PrintPlan(output io.Writer, p setup.Plan) {
 	fmt.Fprintf(output, "\nSetup plan %s · %s · %s\n", p.ModelName, p.Quant, p.RuntimeName)
-	fmt.Fprintf(output, "%d approval · %d OS password prompts · %s\n", p.Prompts.Approvals, p.Prompts.Passwords, p.DownloadSummary())
+	fmt.Fprintln(output, "Install? "+p.CountsLine(false))
+	if p.Prompts.Passwords > 0 {
+		fmt.Fprintln(output, "Needs your Mac password once")
+	}
 	if p.Prompts.AfterRestart != "" {
 		fmt.Fprintln(output, p.Prompts.AfterRestart)
 	}

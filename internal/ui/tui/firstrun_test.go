@@ -67,7 +67,7 @@ func TestPickerCachedDrawUnder150ms(t *testing.T) {
 	t.Log("cached draw", elapsed)
 }
 
-func TestFirstRunLocalFiveKeys(t *testing.T) {
+func TestFirstRunLocalSixKeys(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{Detect}
 	m.firstRun = true
@@ -110,10 +110,14 @@ func TestFirstRunLocalFiveKeys(t *testing.T) {
 	_, cmd = m.Update(key("enter"))
 	m.Update(cmd())
 	_, launch := m.Update(sparkleMsg(3))
-	if m.screen() != Launching || launch == nil {
-		t.Fatal("five keys did not reach the local tool handoff", m.screen())
+	if m.screen() != Ready || launch != nil {
+		t.Fatal("Ready did not wait for a key", m.screen())
 	}
-	t.Log("Agents Enter + Later s + Choose Enter + Set up s + approval Enter = 5 keys")
+	_, launch = m.Update(key("enter"))
+	if m.screen() != Launching || launch == nil {
+		t.Fatal("six keys did not reach the local tool handoff", m.screen())
+	}
+	t.Log("Agents Enter + Later s + Choose Enter + Set up s + approval Enter + Open Enter = 6 keys")
 }
 func TestTryKeepsCellAcrossAgentSwitch(t *testing.T) {
 	m := fixture(t)

@@ -8,8 +8,8 @@
 [36m│[m · llama-server :8080 · in-process bridge                                   [36m│[m
 [36m│[m                                                                            [36m│[m
 [36m│[m [33m2 Other Models Loaded | Expect Slower Speeds[m                               [36m│[m
-[36m│[m [90mllama-server · 7.52 GB memory[m                                              [36m│[m
-[36m│[m [90mOllama · 6.44 GB memory[m                                                    [36m│[m
+[36m│[m [90mllama-server · qwen3.5:9b[m                                                  [36m│[m
+[36m│[m [90mOllama[m                                                                     [36m│[m
 [36m│[m · speed · greeting · tool call · follow-up                                 [36m│[m
 [36m│[m sha256 checked                                                             [36m│[m
 [36m│[m archive extracted                                                          [36m│[m

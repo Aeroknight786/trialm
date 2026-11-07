@@ -29,17 +29,13 @@ func (p Plan) UntouchedSummary() string {
 	return strings.Join(p.Untouched, ", ")
 }
 
-// CountsLine is shared by compact and detailed setup cards.
-func (p Plan) CountsLine(onDisk bool) string {
-	summary := p.DownloadSummary()
-	if onDisk {
-		summary = "already on disk · " + summary
+// CountsLine is the download size shared by compact and detailed setup cards.
+func (p Plan) CountsLine(_ bool) string {
+	size := figure.Bytes(max(0, p.DownloadBytes-p.OnDisk()), "setup:plan")
+	if size.Unit == "MB" {
+		size = figure.Band(size.V, 20, size.Unit, size.Kind, size.Src)
 	}
-	password := "no password"
-	if p.Prompts.Passwords > 0 {
-		password = fmt.Sprintf("%d OS password prompt(s)", p.Prompts.Passwords)
-	}
-	return summary + fmt.Sprintf(" · %d approval · ", p.Prompts.Approvals) + password
+	return size.String()
 }
 
 func (s Step) Description(expanded bool) string {

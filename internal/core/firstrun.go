@@ -14,6 +14,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 )
 
 // AgentChoice is shared first-run state; the UI only toggles Checked.
@@ -134,3 +135,38 @@ func ReadyTimes(p setup.Plan, r *verify.Report) (reply, first, estReply, estFirs
 }
 
 func LowPower(ctx context.Context) bool { return hw.MacPower(ctx).LowPower }
+
+// ReadyDuration budgets the verification prompts and output caps at the plan's
+// predictor rates. fitted targets 90% of each depth and token counts use 0.8.
+// Round the initial estimate to a minute, then let the UI count seconds.
+func ReadyDuration(p setup.Plan) time.Duration {
+	ub := p.ReadyOptions.UBatch
+	if ub <= 0 {
+		ub = 512
+	}
+	if p.ContextTokens > 0 {
+		ub = min(ub, max(1, p.ContextTokens-256))
+	}
+	reading, writing := float64(min(ub, (ub+256)*9/10))*.8+128, float64(8+32+16+8+1+8)
+	deepWriting := 0.
+	for _, depth := range []int{8192, p.ContextTokens} {
+		if depth <= 0 || depth == 8192 && p.ContextTokens < 8192 {
+			continue
+		}
+		reading += float64(max(1, min(depth-256, depth*9/10))) * .8
+		deepWriting += 32
+		if p.ContextTokens == 8192 {
+			break
+		}
+	}
+	if p.Harness != "" {
+		reading += 384 // greeting, tool call and follow-up
+		writing += 96
+	}
+	if p.BitsPerWeight > 0 && p.BitsPerWeight < 3 {
+		reading += 20 * 128
+		writing += 20 * 128
+	}
+	seconds := reading/max(1, p.Predicted.PrefillTPS) + writing/max(1, p.Predicted.DecodeTPS0) + deepWriting/max(1, p.Predicted.DecodeTPSTarget)
+	return time.Duration(max(1, math.Ceil(seconds/60))) * time.Minute
+}

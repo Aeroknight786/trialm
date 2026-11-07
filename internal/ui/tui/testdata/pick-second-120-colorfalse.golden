@@ -3,8 +3,8 @@ Models · 2 of 11
   ○ Qwen3.6 35B-A3B             up to 256K  ~48 t/s   13.2 GB █
 ❯ ○ Gemma 4 26B-A4B             up to 256K  ~29 t/s   13.6 GB │
   ○ gpt-oss 20B                 up to 128K  ~40 t/s   12.1 GB │
-  ○ Qwen3-Coder 30B-A3B         up to 130K  ~47 t/s   12.9 GB │
-  ○ GLM-4.7-Flash               up to 123K  ~45 t/s   12.9 GB │
+  ○ Qwen3-Coder 30B-A3B         up to 128K  ~47 t/s   12.9 GB │
+  ○ GLM-4.7-Flash               up to 64K   ~45 t/s   12.9 GB │
   ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB │
   ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB │
 

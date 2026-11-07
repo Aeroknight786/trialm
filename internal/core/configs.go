@@ -268,13 +268,7 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 			for _, cache := range cm.CacheTypes {
 				g := BuildConfigGrid(row.Result.Model, rt, cache, d.Target, h.Scenario, local, c)
 				cm.Grids[gridKey(rt.ID, cache)] = g
-				for _, f := range g.Files {
-					for _, cell := range f.Cells {
-						if cell.Fits {
-							cm.MaxContext = max(cm.MaxContext, g.MaxContext, cell.Context)
-						}
-					}
-				}
+				cm.MaxContext = max(cm.MaxContext, g.MaxContext)
 			}
 		}
 		if cm.MaxContext == 0 {
@@ -330,25 +324,11 @@ func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict
 			c.First = PredictionMetric(r, r.Scenario.ColdFirstReply.Seconds(), "s", true)
 			f.Cells = append(f.Cells, c)
 		}
-		lo, hi := 0, m.NativeCtx
 		for _, cell := range f.Cells {
 			if cell.Fits {
-				lo = max(lo, cell.Context)
+				g.MaxContext = max(g.MaxContext, cell.Context)
 			}
 		}
-		for hi-lo > 1024 {
-			mid := (lo + hi + 1) / 2
-			r := predict.Predict(predict.Input{Model: m, QuantName: q.Name, Runtime: rt, Target: t, Tuned: true, CtxOverride: mid, KVCacheType: cache, Scenario: sc})
-			if r.Unsupported == "" && r.Memory.TotalBytes <= r.Memory.BudgetBytes {
-				lo = mid
-			} else {
-				hi = mid - 1
-			}
-		}
-		if hi == m.NativeCtx && f.Cells[len(f.Cells)-1].Fits {
-			lo = hi
-		}
-		g.MaxContext = max(g.MaxContext, lo/1024*1024)
 		g.Files = append(g.Files, f)
 	}
 	return g

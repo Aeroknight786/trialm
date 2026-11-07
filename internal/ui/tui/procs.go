@@ -2,9 +2,9 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/hw"
 )
 
@@ -21,10 +21,11 @@ func (m *Root) modelWarning() string {
 	if len(m.otherModels) == 0 {
 		return ""
 	}
-	b := m.theme.caveat.Render(fmt.Sprintf("%d Other Models Loaded | Expect Slower Speeds", len(m.otherModels)))
-	if m.expanded {
-		for _, server := range m.otherModels {
-			b += "\n" + m.theme.dim.Render(server.Name+" · "+figure.Bytes(int64(server.MemoryBytes), "process:rss").String()+" memory")
+	n := len(m.otherModels)
+	b := m.theme.caveat.Render(fmt.Sprintf("%d Other Model%s Loaded | Expect Slower Speeds", n, map[bool]string{true: "s"}[n > 1]))
+	for _, s := range m.otherModels {
+		if m.expanded {
+			b += "\n" + m.theme.dim.Render(strings.TrimSuffix(s.Name+" · "+s.Model, " · "))
 		}
 	}
 	return b

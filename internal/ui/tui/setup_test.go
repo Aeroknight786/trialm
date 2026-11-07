@@ -82,3 +82,53 @@ func TestSetupShowsUnknownInstallerBytes(t *testing.T) {
 		t.Fatal(m.View().Content)
 	}
 }
+
+func TestReadyCountdownAndSubChecks(t *testing.T) {
+	m := fixture(t)
+	m.stack = []Screen{Setup}
+	m.theme = newPalette(true, false)
+	m.busy = true
+	m.setup.plan.Predicted.PrefillTPS = 300
+	m.setup.plan.ContextTokens = 32768
+	m.setupEvent(setupEvent{event: core.Event{Type: "setup_step", Data: setup.Update{Index: 5, Kind: setup.Check, State: "running"}}})
+	start := m.setup.checkStarted
+	for _, tc := range []struct {
+		elapsed     time.Duration
+		left, stage string
+	}{{0, "About 2 min left", "Reading a 23K-token prompt"}, {time.Second, "About 1 min 59 s left", "Writing"}, {17 * time.Second, "About 1 min 43 s left", "Follow-up"}, {3 * time.Minute, "About 1 min left", "Checking Claude Code"}} {
+		m.setupEvent(setupEvent{event: core.Event{Type: "setup_check", Data: tc.stage}})
+		_, tick := m.Update(pulseMsg(start.Add(tc.elapsed)))
+		for _, expanded := range []bool{false, true} {
+			m.expanded = expanded
+			b := strip(m.setupBody())
+			if tick == nil || !strings.Contains(b, tc.left) || !strings.Contains(b, tc.stage) {
+				t.Fatal(b)
+			}
+		}
+	}
+	m.setupEvent(setupEvent{done: true, journal: setup.Journal{State: "ready", Report: &verify.Report{Ready: true}}})
+	_, cmd := m.Update(pulseMsg(start.Add(4 * time.Minute)))
+	m.Update(sparkleMsg(3))
+	if cmd != nil || m.screen() != Ready || m.busy {
+		t.Fatal("Ready kept ticking or launched")
+	}
+	_, quit := m.Update(key("q"))
+	if quit == nil || m.screen() != Ready {
+		t.Fatal("Later did not leave Ready")
+	}
+}
+
+func TestPlanOnlyMentionsNeededPassword(t *testing.T) {
+	m := fixture(t)
+	m.stack = []Screen{Setup}
+	m.theme = newPalette(true, false)
+	m.setup.journal = setup.Journal{}
+	b := m.setupBody()
+	if strings.Contains(b, "approval") || strings.Contains(b, "password") || !strings.Contains(b, "Install? 13.2 GB") {
+		t.Fatal(b)
+	}
+	m.setup.plan.Prompts.Passwords = 1
+	if b = m.setupBody(); !strings.Contains(b, "Needs your Mac password once") {
+		t.Fatal(b)
+	}
+}

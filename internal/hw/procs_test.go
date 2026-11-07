@@ -56,7 +56,7 @@ func TestModelServersSnapshot(t *testing.T) {
 				}
 				return
 			}
-			if calls != 1 || got[0].PID != 12 || got[0].MemoryBytes != 6815744*1024 || got[2].Name != "LM Studio" || got[3].Name != "mlx-lm" {
+			if calls != 1 || got[0].PID != 12 || got[0].Model != "9b" || got[1].Model != "" || got[3].Model != "Qwen/9B" || got[2].Name != "LM Studio" || got[3].Name != "mlx-lm" {
 				t.Fatal(got, r.calls)
 			}
 		})

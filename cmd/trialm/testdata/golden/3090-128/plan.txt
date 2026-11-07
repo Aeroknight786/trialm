@@ -1,6 +1,6 @@
 
 Setup plan Qwen3.6 35B-A3B · Q4_K_M · llama.cpp (llama-server)
-1 approval · 0 OS password prompts · 22.9 GB download
+Install? 22.9 GB
 65536 tokens · f16 · http://127.0.0.1:8080
 1/7 install · Install llama.cpp b12182
   https://github.com/ggml-org/llama.cpp/releases/download/b12182/llama-b12182-bin-ubuntu-cuda-12.8-x64.tar.gz

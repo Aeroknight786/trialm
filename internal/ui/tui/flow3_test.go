@@ -128,14 +128,14 @@ func TestOtherModelsWarnAndNeverBlock(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{Calibrate}
 	m.cfg.Power = nil
-	servers := []hw.ModelServer{{Name: "llama-server", MemoryBytes: 7 << 30}, {Name: "Ollama", MemoryBytes: 6 << 30}}
+	servers := []hw.ModelServer{{Name: "llama-server", Model: "qwen3.5:9b"}, {Name: "Ollama"}}
 	m.cfg.ModelServers = func(context.Context) []hw.ModelServer { return servers }
 	m.Update(m.scanServers()())
 	if !strings.Contains(strip(m.body()), "2 Other Models Loaded | Expect Slower Speeds") {
 		t.Fatal(m.body())
 	}
 	m.Update(key("v"))
-	if !strings.Contains(m.body(), "Ollama") || !strings.Contains(m.body(), "7.52 GB memory") {
+	if !strings.Contains(m.body(), "Ollama") || !strings.Contains(m.body(), "llama-server · qwen3.5:9b") {
 		t.Fatal(m.body())
 	}
 	// Completion of the asynchronous preflight still starts calibration.

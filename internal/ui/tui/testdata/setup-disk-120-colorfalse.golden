@@ -2,10 +2,10 @@
 ╭────────────────────────────────────────────────────────────────────────────╮
 │ Setting up Qwen3.6 35B-A3B for Codex                                       │
 │                                                                            │
-│ Install? already on disk · 13.2 GB download · 1 approval · no password     │
+│ Install? 17 MB                                                             │
 │                                                                            │
 │ · Install the engine (17 MB)                                               │
-│ · Download the model                                                       │
+│ ✓ Model already on disk                                                    │
 │ · Start and connect Codex                                                  │
 │ · Check speed                                                              │
 ╰────────────────────────────────────────────────────────────────────────────╯

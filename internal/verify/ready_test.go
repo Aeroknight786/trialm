@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/aeroknight786/trialm/internal/calib"
+	"github.com/aeroknight786/trialm/internal/llm"
+	"github.com/aeroknight786/trialm/internal/upstream"
 )
 
 func TestReadyFake(t *testing.T) {
@@ -48,9 +50,13 @@ func TestReadyFake(t *testing.T) {
 				fmt.Fprint(w, `{"choices":[{"message":{"content":"ok"}}],"timings":{"prompt_ms":2}}`)
 			}))
 			defer s.Close()
-			r, err := Ready(context.Background(), ReadyOptions{Endpoint: s.URL, Model: "m", ContextTokens: 512, BitsPerWeight: 2, Predicted: Predicted{DecodeTPS0: 100, PrefillTPS: 100}})
+			var stages []string
+			r, err := Ready(context.Background(), ReadyOptions{SubCheck: func(text string) { stages = append(stages, text) }, Endpoint: s.URL, Model: "m", ContextTokens: 512, BitsPerWeight: 2, Predicted: Predicted{DecodeTPS0: 100, PrefillTPS: 100}})
 			if err != nil {
 				t.Fatal(err)
+			}
+			if len(stages) == 0 || stages[0] != "Writing" || !strings.Contains(strings.Join(stages, "|"), "Follow-up|Writing|Checking tool calls") {
+				t.Fatal(stages)
 			}
 			if len(r.Samples) != 3 || r.DecodeTPS[128] <= 0 || r.DecodeTPS[512] != 0 || r.DecodeTPS[0] != 0 {
 				t.Fatalf("requested depths retained: %+v", r)
@@ -199,5 +205,17 @@ func TestSweepCountsAndCache(t *testing.T) {
 				t.Fatalf("%+v %v", r, err)
 			}
 		})
+	}
+}
+
+func TestDeepPromptProgress(t *testing.T) {
+	s := fakeCloud()
+	defer s.Close()
+	var stages []string
+	_, _, err := fitted(context.Background(), &upstream.OpenAICompat{BaseURL: s.URL}, 32768, func(n int) *llm.Request {
+		return &llm.Request{Messages: []llm.Message{{Role: llm.RoleUser, Content: contextOf(n)}}, MaxTokens: 32}
+	}, func(text string) { stages = append(stages, text) })
+	if err != nil || strings.Join(stages, "|") != "Reading a 23K-token prompt|Writing" {
+		t.Fatal(stages, err)
 	}
 }

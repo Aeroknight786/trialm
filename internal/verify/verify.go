@@ -164,7 +164,7 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 }
 
 // measure streams one request and times it.
-func measure(ctx context.Context, c upstream.Client, req *llm.Request) (Measurement, string, error) {
+func measure(ctx context.Context, c upstream.Client, req *llm.Request, firstToken ...func()) (Measurement, string, error) {
 	start := time.Now()
 	req.IncludeUsage = true
 	events, err := c.Stream(ctx, req)
@@ -182,6 +182,9 @@ func measure(ctx context.Context, c upstream.Client, req *llm.Request) (Measurem
 			now := time.Now()
 			if first.IsZero() {
 				first = now
+				if len(firstToken) > 0 {
+					firstToken[0]()
+				}
 			}
 			last = now
 			pieces += tok.Count(ev.Text)

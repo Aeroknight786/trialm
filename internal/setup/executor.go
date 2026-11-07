@@ -514,6 +514,7 @@ func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path stri
 			h, _ := harness.Get(j.Plan.Harness)
 			o.Harness = &h
 		}
+		o.SubCheck = func(line string) { e.emit("setup_check", line) }
 		o.Progress = func(line string) { e.emit("setup_log", Update{Lines: []string{line}}) }
 		ready := e.Ready
 		if ready == nil {

@@ -87,7 +87,7 @@ func TestViewGoldens(t *testing.T) {
 	old := lipgloss.Writer.Profile
 	lipgloss.Writer.Profile = colorprofile.TrueColor
 	defer func() { lipgloss.Writer.Profile = old }()
-	screens := []Screen{First, Paste, Detect, Agents, Calibrate, "calibrating", "calibrate-low-power", "pick-second", "pick-last", "pick-cache", "pick-file", "pick-disk", "pick-grid", "pick-moved", "pick-scrolled", "calibrate-models", "calibrate-models-details", "setup-models", "setup-models-details", "detecting", Help, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk"}
+	screens := []Screen{First, Paste, Detect, Agents, Calibrate, "calibrating", "calibrate-low-power", "pick-second", "pick-last", "pick-cache", "pick-file", "pick-disk", "pick-grid", "pick-moved", "pick-scrolled", "calibrate-models", "calibrate-models-details", "setup-models", "setup-models-details", "detecting", Help, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk", "setup-check", "setup-check-later"}
 	for _, screen := range screens {
 		for _, w := range []int{60, 80, 120} {
 			for _, plain := range []bool{false, true} {
@@ -138,7 +138,7 @@ func TestViewGoldens(t *testing.T) {
 						}
 					}
 					if strings.Contains(string(screen), "-models") {
-						m.otherModels = []hw.ModelServer{{Name: "llama-server", MemoryBytes: 7 << 30}, {Name: "Ollama", MemoryBytes: 6 << 30}}
+						m.otherModels = []hw.ModelServer{{Name: "llama-server", Model: "qwen3.5:9b"}, {Name: "Ollama"}}
 						m.expanded = strings.HasSuffix(string(screen), "-details")
 						m.stack = []Screen{Calibrate}
 						if strings.HasPrefix(string(screen), "setup-") {
@@ -215,6 +215,25 @@ func TestViewGoldens(t *testing.T) {
 						m.setup.journal = setup.Journal{}
 						m.expanded = screen == "setup-details"
 						m.setup.onDisk = screen == "setup-disk"
+						if m.setup.onDisk {
+							m.setup.plan.DownloadBytes = 16700000
+							m.setup.plan.Steps = append(m.setup.plan.Steps[:1:1], m.setup.plan.Steps[2:]...)
+						}
+					}
+					if screen == "setup-check" || screen == "setup-check-later" {
+						m.stack = []Screen{Setup}
+						m.busy = true
+						m.setup.states = map[int]string{1: "done", 2: "done", 3: "done", 4: "done", 5: "running"}
+						m.setup.update = setup.Update{Kind: setup.Check}
+						m.setup.checkStarted = time.Unix(1000, 0)
+						m.setup.checkNow = m.setup.checkStarted
+						m.setup.plan.Predicted.PrefillTPS = 300
+						m.setup.plan.ContextTokens = 32768
+						m.setup.subCheck = "Reading a 23K-token prompt"
+						if screen == "setup-check-later" {
+							m.setup.checkNow = m.setup.checkNow.Add(17 * time.Second)
+							m.setup.subCheck = "Writing"
+						}
 					}
 					if screen == "ready-details" || screen == "ready-sparkle" {
 						m.stack = []Screen{Ready}
@@ -475,6 +494,11 @@ func TestLauncherKeyCount(t *testing.T) {
 				}
 				program.Send(key("enter"))
 				keys++
+				waitScreen(t, program, Ready)
+				time.Sleep(time.Second) // sparkle has finished and Ready still waits
+				waitScreen(t, program, Ready)
+				program.Send(key("enter"))
+				keys++
 			}
 			// A return to the launcher proves the tool subprocess completed.
 			waitScreen(t, program, Home)
@@ -482,7 +506,7 @@ func TestLauncherKeyCount(t *testing.T) {
 			if e := <-done; e != nil {
 				t.Fatal(e)
 			}
-			want := 2
+			want := 3
 
 			if state == "ready" {
 				want = 1
@@ -826,7 +850,6 @@ func TestErrorDetailsAndReducedMotion(t *testing.T) {
 	if m.tick() == nil {
 		t.Fatal("calibration spinner needs ticks with NO_COLOR")
 	}
-	m.autoLaunch = false
 	m.stack = []Screen{Ready}
 	_, cmd := m.Update(sparkleMsg(1))
 	if cmd != nil || m.sparkle != 3 {

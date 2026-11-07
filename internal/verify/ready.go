@@ -36,6 +36,8 @@ type ReadyOptions struct {
 	Harness       *harness.Harness
 	APIs          []string
 	Progress      func(string)
+	// SubCheck reports the current work before it starts, in plain words.
+	SubCheck func(string)
 	// UBatch is the configured prompt processing batch size.
 	UBatch int
 }
@@ -54,6 +56,12 @@ type Report struct {
 	FollowUpTTFT   float64            `json:"follow_up_ttft_s"`
 	SpecVerifySecs []float64          `json:"spec_verify_s,omitempty"`
 	Misses         []string           `json:"misses,omitempty"`
+}
+
+func (o ReadyOptions) stage(text string) {
+	if o.SubCheck != nil {
+		o.SubCheck(text)
+	}
 }
 
 func (r *Report) add(o ReadyOptions, name string, ok bool, detail string) {
@@ -98,6 +106,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 	req := func(text string, n int) *llm.Request {
 		return &llm.Request{Messages: []llm.Message{{Role: llm.RoleUser, Content: text}}, MaxTokens: n, Temperature: &zero, Stream: true}
 	}
+	o.stage("Writing")
 	warm, _, err := measure(ctx, c, req("Reply OK.", 8))
 	if err != nil {
 		r.add(o, "warmup", false, err.Error())
@@ -117,20 +126,13 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 	var shortSpeed, targetSpeed float64
 	decodeAt := func(depths []int) bool {
 		for _, depth := range depths {
-			if o.Progress != nil && depth > 0 { // a deep prompt can take minutes
-				wait := "a while"
-				if r.PrefillTPS > 0 {
-					wait = "about " + figure.Exact(math.Round(float64(depth)/r.PrefillTPS/10)*10, "s", figure.Simulated, "verify:prefill").String()
-				}
-				o.Progress(fmt.Sprintf("decode: reading a %dK prompt first to time writing there (%s)", depth/1024, wait))
-			}
 			ask := "Write a detailed explanation of a software cache."
 			m, _, e := fitted(ctx, c, depth, func(n int) *llm.Request {
 				if n <= 0 {
 					return req(ask, 32)
 				}
 				return req(contextOf(n)+"\n"+ask, 32)
-			})
+			}, o.stage)
 			if e != nil || m.DecodeTPS <= 0 {
 				detail := "no decode timing"
 				if e != nil {
@@ -166,7 +168,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 		n = min(n, max(1, o.ContextTokens-256))
 	}
 	text := syntheticContext(n)
-	m, reply, e := fitted(ctx, c, n+256, func(k int) *llm.Request { text = contextOf(max(1, k)); return req(text, 16) })
+	m, reply, e := fitted(ctx, c, n+256, func(k int) *llm.Request { text = contextOf(max(1, k)); return req(text, 16) }, o.stage)
 	if e != nil || m.TTFTSec <= 0 {
 		detail := "no prompt timing"
 		if e != nil {
@@ -185,6 +187,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 	r.add(o, "prefill", true, detail)
 	follow := req(text, 8)
 	follow.Messages = append(follow.Messages, llm.Message{Role: llm.RoleAssistant, Content: reply}, llm.Message{Role: llm.RoleUser, Content: "Continue briefly."})
+	o.stage("Follow-up")
 	fm, _, e := measure(ctx, c, follow)
 	if e != nil || fm.TTFTSec <= 0 {
 		detail := "no follow-up timing"
@@ -204,6 +207,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 	}
 	r.add(o, "follow_up", true, fmt.Sprintf("first token in %s s; cache %s", figure.BandNumber(fm.TTFTSec, 20), cache))
 	// Each measurement must report both newly processed and cached tokens.
+	o.stage("Writing")
 	prefix := strings.Repeat("cache ", 64)
 	_, _, e = measure(ctx, c, req(prefix, 1))
 	reason := ""
@@ -241,6 +245,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 		r.add(o, "spec_verify", true, "measured batches 1–4; engine confirmed new token counts")
 	}
 	if o.Harness != nil {
+		o.stage("Checking " + strings.TrimSuffix(o.Harness.Name, " CLI"))
 		h := HarnessCheckRun(ctx, o.Endpoint, o.Model, o.APIKey, *o.Harness, o.APIs)
 		detail := h.Path
 		if h.Error != "" {
@@ -249,6 +254,7 @@ func Ready(ctx context.Context, o ReadyOptions) (Report, error) {
 		r.add(o, "harness", h.Passed, detail)
 	}
 	if o.BitsPerWeight > 0 && o.BitsPerWeight < 3 {
+		o.stage("Checking tool calls")
 		ok, detail := toolCalls(ctx, o)
 		r.add(o, "tool_calls", ok, detail)
 	}
@@ -310,13 +316,34 @@ var tooLong = regexp.MustCompile(`\((\d+) tokens\)[^(]*\((\d+) tokens\)`)
 // can be off for the engine's tokenizer, so it aims at 90% of the depth and,
 // when the engine reports the request as too long, rescales once from the
 // engine's own counts.
-func fitted(ctx context.Context, c upstream.Client, depth int, build func(n int) *llm.Request) (Measurement, string, error) {
+func fitted(ctx context.Context, c upstream.Client, depth int, build func(n int) *llm.Request, progress ...func(string)) (Measurement, string, error) {
 	n := 0
 	if depth > 0 {
 		n = max(1, min(depth-256, depth*9/10))
 	}
-	m, reply, e := measure(ctx, c, build(n))
-	for try := 0; try < 2 && e != nil && n > 1; try++ {
+	var m Measurement
+	var reply string
+	var e error
+	stage := func(text string) {
+		if len(progress) > 0 {
+			progress[0](text)
+		}
+	}
+	for try := 0; try < 3; try++ {
+		if n > 0 {
+			count, unit := float64(n)*.8, "-token"
+			if count >= 1024 {
+				count /= 1024
+				unit = "K-token"
+			}
+			stage("Reading a " + figure.Band(count, 20, "", figure.Simulated, "verify:prompt").Number() + unit + " prompt")
+		} else {
+			stage("Writing")
+		}
+		m, reply, e = measure(ctx, c, build(n), func() { stage("Writing") })
+		if e == nil || n <= 1 {
+			break
+		}
 		g := tooLong.FindStringSubmatch(e.Error())
 		if g == nil {
 			break
@@ -326,7 +353,6 @@ func fitted(ctx context.Context, c upstream.Client, depth int, build func(n int)
 			break
 		}
 		n = max(1, int(float64(n)*float64(avail-256)/float64(sent)*0.95))
-		m, reply, e = measure(ctx, c, build(n))
 	}
 	return m, reply, e
 }

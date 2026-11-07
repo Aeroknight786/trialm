@@ -1,18 +1,20 @@
 package hw
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 )
 
 type ModelServer struct {
-	PID         int
-	Name        string
-	MemoryBytes uint64
+	PID   int
+	Name  string
+	Model string // what it serves, from --alias, -m, --model or -hf; "" if unknown
 }
 
 // ModelServers takes one process snapshot. PID records under this home's run
@@ -52,7 +54,7 @@ func parseModelServers(output string, owned map[int][]string) []ModelServer {
 			continue
 		}
 		pid, err := strconv.Atoi(f[0])
-		rss, rssErr := strconv.ParseUint(f[1], 10, 64)
+		rss, rssErr := strconv.ParseUint(f[1], 10, 64) // 0 means a zombie
 		if err != nil || rssErr != nil || pid <= 0 || rss == 0 {
 			continue
 		}
@@ -80,8 +82,30 @@ func parseModelServers(output string, owned map[int][]string) []ModelServer {
 			name = "LM Studio"
 		}
 		if name != "" {
-			found = append(found, ModelServer{PID: pid, Name: name, MemoryBytes: rss * 1024})
+			found = append(found, ModelServer{PID: pid, Name: name, Model: servedModel(f[2:])})
 		}
 	}
 	return found
+}
+
+// servedModel names the model in a server's argv. RSS is not shown: Metal
+// buffers are not counted in it, so a loaded 9B can show a few MB.
+func servedModel(args []string) string {
+	flag := func(names ...string) string {
+		for i := 0; i+1 < len(args); i++ {
+			if slices.Contains(names, args[i]) {
+				return args[i+1]
+			}
+		}
+		return ""
+	}
+	// --model before -m: python -m mlx_lm.server --model X.
+	v := cmp.Or(flag("--alias", "-a"), flag("-hf", "--hf-repo"), flag("--model"), flag("-m"))
+	if strings.HasPrefix(v, "/") || strings.HasPrefix(v, ".") {
+		v = strings.TrimSuffix(filepath.Base(v), ".gguf")
+	}
+	if strings.HasPrefix(v, "sha256-") {
+		return ""
+	}
+	return v
 }

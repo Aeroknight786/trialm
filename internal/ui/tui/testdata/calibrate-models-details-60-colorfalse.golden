@@ -4,8 +4,8 @@
 │ Downloads                                              │
 │                                                        │
 │ 2 Other Models Loaded | Expect Slower Speeds           │
-│ llama-server · 7.52 GB memory                          │
-│ Ollama · 6.44 GB memory                                │
+│ llama-server · qwen3.5:9b                              │
+│ Ollama                                                 │
 ╰────────────────────────────────────────────────────────╯
 
 ⏎ Now   s Later (run trialm calibrate)   v Details

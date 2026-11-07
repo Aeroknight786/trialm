@@ -2,11 +2,10 @@
 [36m╭────────────────────────────────────────────────────────╮[m
 [36m│[m Setting up Qwen3.6 35B-A3B for Codex                   [36m│[m
 [36m│[m                                                        [36m│[m
-[36m│[m Install? already on disk · 13.2 GB download · 1        [36m│[m
-[36m│[m approval · no password                                 [36m│[m
+[36m│[m Install? 17 MB                                         [36m│[m
 [36m│[m                                                        [36m│[m
 [36m│[m · Install the engine (17 MB)                           [36m│[m
-[36m│[m · Download the model                                   [36m│[m
+[36m│[m [32m✓[m Model already on disk                                [36m│[m
 [36m│[m · Start and connect Codex                              [36m│[m
 [36m│[m · Check speed                                          [36m│[m
 [36m╰────────────────────────────────────────────────────────╯[m
