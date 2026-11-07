@@ -3,6 +3,8 @@ package ui
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/aeroknight786/trialm/internal/setup"
+	"github.com/aeroknight786/trialm/internal/setup/download"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -12,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/figure"
@@ -102,5 +105,26 @@ func TestRendererPlainNoEscapes(t *testing.T) {
 	r.Handle(core.Event{Type: "result", Data: "triaLM ready"})
 	if r.Err != nil || bytes.ContainsRune(b.Bytes(), '\x1b') {
 		t.Fatal(b.String(), r.Err)
+	}
+}
+
+func TestCalibrationProgressAndPlainLogs(t *testing.T) {
+	var b bytes.Buffer
+	u := setup.Update{Kind: setup.Calibrate, Fraction: .25, Progress: &download.Progress{Done: 1, Total: 4, ETA: 45 * time.Second}}
+	r := Renderer{Out: &b, JSON: true}
+	r.Handle(core.Event{Type: "setup_progress", Data: u})
+	var event struct{ Data map[string]any }
+	if err := json.Unmarshal(b.Bytes(), &event); err != nil {
+		t.Fatal(err)
+	}
+	if event.Data["kind"] != "calibrate" || event.Data["fraction"] == nil || event.Data["eta"] == nil || event.Data["bytes"] != nil {
+		t.Fatal(b.String())
+	}
+	b.Reset()
+	r = Renderer{Out: &b}
+	r.Handle(core.Event{Type: "setup_progress", Data: u})
+	r.Handle(core.Event{Type: "setup_log", Data: setup.Update{Lines: []string{"Low Power skip reason"}}})
+	if !strings.Contains(b.String(), "Calibrating 1 of 4") || !strings.Contains(b.String(), "Low Power skip reason") || strings.Contains(b.String(), "Download") {
+		t.Fatal(b.String())
 	}
 }

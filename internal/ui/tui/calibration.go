@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +32,7 @@ type calibrationJob struct {
 
 func newCalibration(parent context.Context, exe string) *calibrationJob {
 	ctx, cancel := context.WithCancel(parent)
-	job := &calibrationJob{events: make(chan calibrationEventMsg, 32), cancel: cancel, eta: "estimating"}
+	job := &calibrationJob{events: make(chan calibrationEventMsg, 32), cancel: cancel, eta: "Estimating time left"}
 	go func() {
 		defer close(job.events)
 		defer cancel()
@@ -105,8 +106,11 @@ func (j *calibrationJob) record(ev calib.Event) {
 	if ev.Total > 0 {
 		j.fraction = float64(max(0, ev.Step-1)) / float64(ev.Total)
 	}
-	j.eta = calib.Remaining(ev.ETA)
-	if ev.Total > 0 {
-		j.eta = fmt.Sprintf("%s · %d/%d", j.eta, ev.Step, ev.Total)
+	if ev.ETA <= 0 {
+		j.eta = "Estimating time left"
+	} else if ev.ETA <= 60 {
+		j.eta = "Under a minute left"
+	} else {
+		j.eta = fmt.Sprintf("About %.0f min left", math.Ceil(ev.ETA/60))
 	}
 }

@@ -5,9 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aeroknight786/trialm/internal/core"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -115,17 +113,18 @@ func newChat(ctx context.Context, client upstream.Client) chatModel {
 // A chat trial keeps this root and starts only a plain server child. Closing
 // its private stdin pipe requests a graceful summary on every OS.
 type chatStartedMsg struct {
-	client upstream.Client
-	stop   func() error
-	err    error
+	endpoint string
+	client   upstream.Client
+	stop     func() error
+	err      error
 }
 
 func (m *Root) startChat(args []string) tea.Cmd {
 	m.busy = true
 	return func() tea.Msg {
 		runArgs := append([]string{"try", "--serve", "--json", "--port", "0"}, args...)
-		cmd := exec.CommandContext(m.cfg.Context, m.cfg.Executable, runArgs...)
-		cmd.Env = append(core.ChildEnv(os.Environ()), "TRIALM_PARENT_PIPE=1")
+		cmd := m.child(runArgs)
+		cmd.Env = append(cmd.Env, "TRIALM_PARENT_PIPE=1")
 		in, e := cmd.StdinPipe()
 		if e != nil {
 			return chatStartedMsg{err: e}
@@ -183,7 +182,7 @@ func (m *Root) startChat(args []string) tea.Cmd {
 		}
 		select {
 		case endpoint := <-ready:
-			return chatStartedMsg{client: &upstream.OpenAICompat{BaseURL: endpoint + "/v1", Model: "trialm-chat"}, stop: stop}
+			return chatStartedMsg{endpoint: endpoint, client: &upstream.OpenAICompat{BaseURL: endpoint + "/v1", Model: "trialm-chat"}, stop: stop}
 		case e := <-done:
 			in.Close()
 			if e == nil {

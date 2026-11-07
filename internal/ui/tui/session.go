@@ -16,6 +16,9 @@ import (
 // SessionConfig adapts the stdlib session once for both home and find.
 func SessionConfig(ctx context.Context, s store.Store, p store.Preferences, o core.Options, top int, version string) Config {
 	cfg := Config{Context: ctx, Store: s, Preferences: p}
+	if o.Device == "" {
+		cfg.Power = core.LowPower
+	}
 	for _, h := range harness.All() {
 		if h.Binary != "" {
 			if _, e := exec.LookPath(harness.FindBinary(h.Binary)); e == nil {
@@ -32,7 +35,7 @@ func SessionConfig(ctx context.Context, s store.Store, p store.Preferences, o co
 		return (core.Session{}).FindPreferences(ctx, s, p, o, top)
 	}
 	cfg.TrialArgs = func(row core.Row, p store.Preferences) []string {
-		return core.TrialArgs(row, p, o)
+		return append(core.TrialArgs(row, p, o), "--tui-handoff")
 	}
 	cfg.UpdateNotice = func(ctx context.Context) string {
 		return core.UpdateNotice(ctx, s, version)
@@ -46,9 +49,12 @@ func SessionConfig(ctx context.Context, s store.Store, p store.Preferences, o co
 		}
 		return (core.Session{}).Models(ctx, opts, d.Target, h)
 	}
+	cfg.Picker = func(ctx context.Context, d core.Detection, p store.Preferences) (core.ConfigPicker, error) {
+		return (core.Session{}).Picker(ctx, d, p, o, s.Dir)
+	}
 	cfg.Plan = func(ctx context.Context, row core.Row, p store.Preferences) (setup.Plan, error) {
 		opts := o
-		opts.Context = p.Context
+		opts.Context, opts.KV, opts.Tuned = row.Result.Settings.ContextTokens, row.Result.Settings.KVCacheType, row.Result.Settings.Tuned
 		return (core.Session{}).PlanRecipe(ctx, row.Result, opts, p.Tool, row.LocalPath)
 	}
 

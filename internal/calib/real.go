@@ -25,6 +25,7 @@ type RealSample struct {
 // quant and engine must be the identifiers used by the predictor.
 type RealMeasurement struct {
 	Model, Quant, Engine string
+	Cache                string
 	Decode               map[int]float64
 	Prefill              float64
 	Samples              []RealSample
@@ -66,22 +67,30 @@ func (c *Calibration) appendReal(m RealMeasurement) {
 		if s.Speed <= 0 || !finite(s.Speed) {
 			continue
 		}
-		raw, _ := json.Marshal(struct{ Model, Engine, Mode string }{m.Model, m.Engine, s.Mode})
+		raw, _ := json.Marshal(struct{ Model, Engine, Mode, Cache string }{m.Model, m.Engine, s.Mode, m.Cache})
 		c.Rows = append(c.Rows, Row{Probe: "real", Quant: m.Quant, Depth: s.Depth, Prompt: s.Prompt, Gen: s.Generated, TokensEstimated: s.TokensEstimated, Seconds: 1 / s.Speed, Raw: raw})
 	}
 }
 
 // RealFactor uses the latest measured interval, pooling only its repetitions.
 // The caller supplies uncalibrated speeds and retains its prior band.
-func (c *Calibration) RealFactor(model, quant, engine, mode string, baseline func(Row) float64) (FactorResult, bool) {
+func (c *Calibration) RealFactor(model, quant, engine, mode string, baseline func(Row) float64, cache ...string) (FactorResult, bool) {
 	samples := map[[2]int][]float64{}
 	var interval [2]int
 	for _, r := range c.Rows {
 		if r.Probe != "real" || r.Quant != quant || r.Seconds <= 0 || !finite(r.Seconds) {
 			continue
 		}
-		var tag struct{ Model, Engine, Mode string }
-		if json.Unmarshal(r.Raw, &tag) == nil && tag.Model == model && tag.Engine == engine && tag.Mode == mode {
+		var tag struct{ Model, Engine, Mode, Cache string }
+		selected := "f16"
+		if len(cache) > 0 && cache[0] != "" {
+			selected = cache[0]
+		}
+		_ = json.Unmarshal(r.Raw, &tag)
+		if tag.Cache == "" {
+			tag.Cache = "f16"
+		}
+		if tag.Cache == selected && tag.Model == model && tag.Engine == engine && tag.Mode == mode {
 			if predicted := baseline(r); predicted > 0 && finite(predicted) {
 				interval = [2]int{r.Depth, r.Prompt}
 				samples[interval] = append(samples[interval], 1/r.Seconds/predicted)

@@ -45,16 +45,23 @@ type setupView struct {
 func (m *Root) planSetup() tea.Cmd {
 	row, ok := m.row()
 	if m.screen() == Summary {
+		if m.trialRow != nil {
+			row, ok = *m.trialRow, true
+		}
 		if model, found := catalog.Lookup(m.last.Model); found {
 			row.Result.Model = model
 			row.Result.Quant.Name = m.last.Quant
 			row.Result.Runtime, _ = engine.Get(m.last.Runtime)
+			if m.last.Context > 0 {
+				row.Result.Settings.ContextTokens = m.last.Context
+				row.Result.Settings.KVCacheType = m.last.KV
+			}
 		}
 	}
 	if !ok || m.cfg.Plan == nil {
 		return nil
 	}
-	m.autoLaunch = m.screen() == Home
+	m.autoLaunch = m.screen() == Home || (m.firstRun && row.LocalPath != "")
 	m.push(Setup)
 	m.busy = true
 	m.setup = setupView{states: map[int]string{}, onDisk: row.LocalPath != ""}
@@ -145,6 +152,11 @@ func (m *Root) setupEvent(v setupEvent) tea.Cmd {
 func (m *Root) launchSetup(j setup.Journal) tea.Cmd {
 	m.push(Launching)
 	argv := []string{"launch", m.cfg.Preferences.Tool, "--setup", j.Plan.Slug, "--here", "--plain"}
+	if m.cfg.Preferences.Tool == "generic" {
+		argv = append(argv, "--serve")
+	} else {
+		argv = append(argv, "--tui-handoff")
+	}
 	cmd := m.child(argv)
 	m.busy = true
 	return tea.ExecProcess(cmd, func(e error) tea.Msg { return childMsg{kind: Launching, err: e} })
@@ -163,81 +175,104 @@ func (m *Root) setupBody() string {
 	if p.ID == "" {
 		return m.card(m.waiting() + " Planning your setup")
 	}
-	b := m.theme.selected.Bold(true).Render("Set up "+p.ModelName+" for "+toolName(m.cfg.Preferences.Tool)) + "\n" + p.CountsLine(m.setup.onDisk) + "\n"
-	b += "Not touched · " + p.UntouchedSummary() + "\n"
-	if p.Prompts.AfterRestart != "" {
-		b += m.theme.caveat.Render(p.Prompts.AfterRestart) + "\n"
+	b := "Setting up " + p.ModelName + " for " + toolName(m.cfg.Preferences.Tool) + "\n"
+	if p.DownloadUnknown {
+		b += "\nInstaller download size unknown\n"
 	}
-	if p.OS == "darwin" && !m.expanded {
-		b += "\n" + p.Overview()
+	if !m.busy && m.setup.journal.State != "ready" {
+		b += "\nInstall? " + p.CountsLine(m.setup.onDisk) + "\n"
 	}
-	for i, step := range p.Steps {
-		state := m.setup.states[i+1]
-		if !m.expanded && (p.OS == "darwin" || !m.busy || state == "") {
-			continue
-		}
+	line := func(title, state string) {
 		mark := "·"
 		if state == "done" {
 			mark = m.theme.good.Render("✓")
 		} else if state != "" {
 			mark = m.waiting()
 		}
-		b += "\n" + mark + " " + step.Description(m.expanded)
+		b += "\n" + mark + " " + title
 	}
-	if u := m.setup.update; u.Progress != nil && u.Progress.Total > 0 {
-		p := u.Progress
-		b += "\n\n" + m.progressBar(float64(p.Done)/float64(p.Total)) + fmt.Sprintf(" %d%%", p.Done*100/p.Total)
-		b += "\n" + figure.Exact(p.BytesPerSec/1e6, "MB/s", figure.Measured, "download").String() + " · ETA " + figure.Exact(math.Round(p.ETA.Seconds()), "s", figure.Measured, "download").String()
+	if m.expanded {
+		for i, s := range p.Steps {
+			line(s.Description(true), m.setup.states[i+1])
+		}
+		b += "\n" + strings.Join(append(append([]string{}, m.setup.logs...), p.Warnings...), "\n")
+		return m.card(b)
 	}
+	download, started, checked := "", "", ""
+	hasDownload := false
+	for i, s := range p.Steps {
+		state := m.setup.states[i+1]
+		switch s.Kind {
+		case setup.Install, setup.RunInstaller:
+			if s.Package == "ollama-model" {
+				continue
+			}
+			title := "Install the engine"
+			if s.Request != nil {
+				title += " (" + figure.Band(float64(s.Request.Size)/1e6, 20, "MB", figure.Simulated, "engine:asset").String() + ")"
+			}
+			line(title, state)
+		case setup.Fetch:
+			hasDownload = true
+			if state != "" {
+				download = state
+			}
+		case setup.Start:
+			if s.ID != "bridge" && state != "" {
+				started = state
+			}
+		case setup.Check:
+			checked = state
+		case setup.Calibrate:
+			title := "Calibrate"
+			if u := m.setup.update; u.Kind == setup.Calibrate {
+				title += " " + figure.Exact(u.Fraction*100, "%", figure.Measured, "setup:calibrate").String()
+			}
+			line(title, state)
+		case setup.Admin:
+			line(s.Title, state)
+		}
+	}
+	if hasDownload {
+		line("Download the model", download)
+		if u := m.setup.update; u.Kind == setup.Fetch && u.Progress != nil && u.Progress.Total > 0 {
+			progress := u.Progress
+			b += "\n  " + m.bar.ViewAs(float64(progress.Done)/float64(progress.Total))
+			b += "\n  " + figure.Exact(float64(progress.Done)/1e9, "", figure.Measured, "download:progress").Number() + " of " + figure.Exact(float64(progress.Total)/1e9, "GB", figure.Measured, "download:progress").String() + " · " + timeLeft(progress.ETA)
+		}
+	}
+	line("Start and connect "+toolName(m.cfg.Preferences.Tool), started)
+	line("Check speed", checked)
 	if m.setup.journal.State == "paused" {
 		b += "\n" + m.setup.journal.Summary()
 	}
-	if m.expanded {
-		b += "\n" + strings.Join(append(append([]string{}, m.setup.logs...), p.Warnings...), "\n")
-	} else if p.OS != "darwin" && m.busy && m.setup.update.Kind == setup.Check {
-		for _, line := range m.setup.logs {
-			name, _, _ := strings.Cut(line, ":")
-			b += "\n" + clip(name, min(m.width, 80)-6)
-		}
+	return m.card(b)
+}
+func timeLeft(d time.Duration) string {
+	if d <= time.Minute {
+		return "Under a minute left"
 	}
-	return m.card(strings.TrimSpace(b))
+	return fmt.Sprintf("About %.0f min left", math.Ceil(d.Minutes()))
 }
 func (m *Root) readyBody() string {
 	p, r := m.setup.plan, m.setup.report
-	sparkle := []string{"✦ Ready", "✧ ✦ Ready ✧", "✦ Ready  ✧", "✦ Ready"}[min(3, m.sparkle)]
-	b := m.theme.good.Bold(true).Render(sparkle) + " · " + p.ModelName + "\n\n                         measured       predicted\n"
+	b := m.theme.good.Bold(true).Render("✦ Ready") + "\n\n" + p.ModelName + " · " + toolName(p.Harness) + fmt.Sprintf(" · %dK context", p.ContextTokens/1024)
 	if r == nil {
-		return m.card(b)
+		return b
 	}
-	row := func(label string, actual, predicted float64, band int) {
-		measured := "—"
-		if actual > 0 {
-			measured = figure.Band(actual, 20, "tok/s", figure.Measured, "verify:ready").String()
-		}
-		pred := "~" + strings.TrimPrefix(figure.Band(predicted, band, "tok/s", figure.Simulated, "setup:prediction").String(), "~")
-		b += fmt.Sprintf("%-23s %12s %15s\n", label, measured, pred)
-	}
-	row("Writing at start", r.DecodeTPS[0], p.Predicted.DecodeTPS0, p.DecodeErrorPct)
-	row(fmt.Sprintf("Writing at %dK", p.ContextTokens/1024), r.DecodeTPS[p.ContextTokens], p.Predicted.DecodeTPSTarget, p.DecodeErrorPct)
-	row("Reading", r.PrefillTPS, p.Predicted.PrefillTPS, p.PrefillErrorPct)
+	reply, first, estReply, estFirst := core.ReadyTimes(p, r)
+	status := "Check needed"
 	for _, c := range r.Checks {
-		if c.OK && (c.Name == "harness" || m.expanded) {
-			b += m.theme.good.Render("✓ "+toolName(p.Harness)+" · "+c.Name) + "\n"
+		if c.Name == "harness" && c.OK {
+			status = "Works"
 		}
 	}
-	warning := ""
-	if r.DecodeTPS[p.ContextTokens] < p.Predicted.DecodeTPSTarget {
-		warning = fmt.Sprintf("Slower than modeled at %dK · saved for future picks", p.ContextTokens/1024)
-	} else if r.PrefillTPS < p.Predicted.PrefillTPS {
-		warning = "Reading was slower than modeled · saved for future picks"
-	}
-	if warning != "" {
-		b += "\n" + m.theme.dim.Render(clip(warning, min(m.width, 80)-6)) + "\n"
-	}
+	b += "\n\n" + m.tiles([]string{"Per reply", "First reply", toolName(p.Harness)}, []string{estimated(reply), estimated(first), status}, []string{"est. " + strings.TrimPrefix(estReply.Number(), "~"), "est. " + strings.TrimPrefix(estFirst.Number(), "~"), "Chat · Tools · Follow-up"})
+	b += "\n\nNext time: trialm"
 	if m.expanded {
-		b += "\n" + strings.Join(m.setup.logs, "\n")
+		b += "\n\n" + r.Plain() + "\n" + strings.Join(m.setup.logs, "\n") + "\nReply times use measured speeds and the agent's reply length"
 	}
-	return m.card(strings.TrimSpace(b))
+	return b
 }
 
 func RunSetup(ctx context.Context, p setup.Plan) error {

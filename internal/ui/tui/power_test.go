@@ -15,7 +15,7 @@ func TestLauncherWarnsInLowPowerMode(t *testing.T) {
 		t.Fatal("warning shown at full power")
 	}
 	m.detection.System = &hw.System{Power: hw.Power{LowPower: true}}
-	if got := m.launcher(); !strings.Contains(got, "Low Power Mode is on") || !strings.Contains(got, "System Settings → Battery") {
+	if got := m.launcher(); !strings.Contains(got, "Low Power Mode | Expect Slower Speeds") {
 		t.Fatalf("no Low Power warning:\n%s", got)
 	}
 }

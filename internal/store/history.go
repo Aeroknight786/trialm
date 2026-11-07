@@ -11,6 +11,8 @@ import (
 
 // TrialEntry keeps the card after a child trial returns the terminal.
 type TrialEntry struct {
+	Context    int          `json:"context,omitempty"`
+	KV         string       `json:"kv,omitempty"`
 	ID         string       `json:"id"`
 	At         time.Time    `json:"at"`
 	Model      string       `json:"model"`

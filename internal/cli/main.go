@@ -620,7 +620,7 @@ func cmdServe(args []string, try bool) error {
 				spend = spending.Spent()
 			}
 			report := trial.Summarize(records, spend, fidelity)
-			_ = store.Default().SaveTrial(store.TrialEntry{ID: trialID, At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID, Band: max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct), Report: report})
+			_ = store.Default().SaveTrial(store.TrialEntry{ID: trialID, At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID, Context: res.Settings.ContextTokens, KV: res.Settings.KVCacheType, Band: max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct), Report: report})
 			if jsonMode {
 				_ = emit("result", report.EventData(max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct)), core.Next{Cmd: "trialm setup " + m.OllamaTag + " --dry-run --json", Why: "review local setup"})
 			}
@@ -635,7 +635,7 @@ func cmdServe(args []string, try bool) error {
 	})
 	meterCtx, meterCancel := context.WithCancel(commandContext)
 	defer meterCancel()
-	windowui.Track(meterCtx, store.Default(), os.Getenv("TRIALM_RUN_ID"), max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct), store.TrialEntry{At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID}, func() trial.Report {
+	windowui.Track(meterCtx, store.Default(), os.Getenv("TRIALM_RUN_ID"), max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct), store.TrialEntry{At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID, Context: res.Settings.ContextTokens, KV: res.Settings.KVCacheType}, func() trial.Report {
 		spend := -1.0
 		if spending != nil {
 			spend = spending.Spent()

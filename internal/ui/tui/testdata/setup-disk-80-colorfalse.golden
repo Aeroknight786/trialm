@@ -1,12 +1,12 @@
 ╭────────────────────────────────────────────────────────────────────────────╮
-│ Set up Qwen3.6 35B-A3B for Codex                                           │
-│ already on disk · 13.2 GB download · 1 approval · no password              │
-│ Not touched · your Codex settings, your shell, other models                │
+│ Setting up Qwen3.6 35B-A3B for Codex                                       │
 │                                                                            │
-│ Install llama.cpp b12182 (16.7 MB)                                         │
-│ Start the engine                                                           │
-│ Connect Codex                                                              │
-│ Check speed and tools                                                      │
+│ Install? already on disk · 13.2 GB download · 1 approval · no password     │
+│                                                                            │
+│ · Install the engine (17 MB)                                               │
+│ · Download the model                                                       │
+│ · Start and connect Codex                                                  │
+│ · Check speed                                                              │
 ╰────────────────────────────────────────────────────────────────────────────╯
 
-enter go  esc back  d details
+⏎ Install    esc Back    v Details

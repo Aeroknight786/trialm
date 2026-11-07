@@ -1,7 +1,7 @@
 ╭────────────────────────────────────────────────────────────────────────────╮
-│ Set up Qwen3.6 35B-A3B for Codex                                           │
-│ 13.2 GB download · 1 approval · no password                                │
-│ Not touched · your Codex settings, your shell, other models                │
+│ Setting up Qwen3.6 35B-A3B for Codex                                       │
+│                                                                            │
+│ Install? 13.2 GB download · 1 approval · no password                       │
 │                                                                            │
 │ · Install llama.cpp b12182                                                 │
 │ · Qwen3.6-35B-A3B.gguf                                                     │
@@ -15,4 +15,4 @@
 │ 8.1 GB received                                                            │
 ╰────────────────────────────────────────────────────────────────────────────╯
 
-enter go  esc back  d details
+⏎ Install    esc Back    v Details

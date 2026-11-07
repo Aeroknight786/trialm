@@ -52,7 +52,13 @@ type exitError struct {
 
 func (e *exitError) Error() string { return e.Message }
 func needs(flag, why string) error { return &exitError{3, why + "; use " + flag} }
+
+var tuiHandoff bool
+
 func out() io.Writer {
+	if tuiHandoff && !jsonMode {
+		return io.Discard
+	}
 	if jsonMode {
 		return os.Stderr
 	}
@@ -85,6 +91,7 @@ func Main(ctx context.Context, argv []string, v string) int {
 	currentVerb = ""
 	selectedMode = SelectMode(argv[1:], terminal.IsTTY(os.Stdin), terminal.IsTTY(os.Stdout), os.Getenv)
 	args := append([]string(nil), argv[1:]...)
+	args, _, tuiHandoff = takeFlag(args, "tui-handoff", false)
 	args, _, _ = takeFlag(args, "plain", false)
 	if len(args) > 1 && (args[0] == "--json" || args[0] == "--json=true") {
 		args = append(args[1:], "--json")

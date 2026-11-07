@@ -79,20 +79,22 @@ func (s Store) RemoveKey() error {
 }
 
 type Preferences struct {
-	Tool          string  `json:"tool"`
-	Use           string  `json:"use"`
-	Model         string  `json:"model"`
-	Priority      string  `json:"priority"`
-	Context       int     `json:"context"`
-	ContextVia    string  `json:"context_via"`
-	QualityFloor  string  `json:"quality_floor"`
-	MaxDownloadGB float64 `json:"max_download_gb"`
-	Engines       string  `json:"engines"`
-	Boosts        string  `json:"boosts"`
-	Privacy       string  `json:"privacy"`
-	BudgetUSD     float64 `json:"budget_usd"`
-	ZDR           bool    `json:"zdr,omitempty"`
-	Hardware      string  `json:"hardware"`
+	Tool           string   `json:"tool"`
+	PreferredTools []string `json:"preferred_tools,omitempty"`
+	FirstRunDone   bool     `json:"first_run_done,omitempty"`
+	Use            string   `json:"use"`
+	Model          string   `json:"model"`
+	Priority       string   `json:"priority"`
+	Context        int      `json:"context"`
+	ContextVia     string   `json:"context_via"`
+	QualityFloor   string   `json:"quality_floor"`
+	MaxDownloadGB  float64  `json:"max_download_gb"`
+	Engines        string   `json:"engines"`
+	Boosts         string   `json:"boosts"`
+	Privacy        string   `json:"privacy"`
+	BudgetUSD      float64  `json:"budget_usd"`
+	ZDR            bool     `json:"zdr,omitempty"`
+	Hardware       string   `json:"hardware"`
 }
 
 func (s Store) Preferences() (Preferences, error) {

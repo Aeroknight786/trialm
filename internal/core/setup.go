@@ -143,6 +143,9 @@ func (s Session) SetupResult(ctx context.Context, j setup.Journal) {
 }
 
 func (s Session) PlanRecipe(ctx context.Context, r predict.Result, o Options, tool string, local ...string) (setup.Plan, error) {
+	if strings.HasPrefix(r.Runtime.ID, "lmstudio") {
+		return setup.Plan{}, errors.New("LM Studio cannot set the selected KV cache through its CLI. Choose llama.cpp, Ollama or mlx-lm")
+	}
 	h, err := harness.Get(tool)
 	if err != nil {
 		return setup.Plan{}, err
@@ -176,7 +179,7 @@ func (s Session) recordReal(ctx context.Context, j setup.Journal) {
 	if hw.MacPower(ctx).LowPower {
 		j.Report.Misses = append(j.Report.Misses, "measured in Low Power Mode, so not saved as this Mac's speed; turn it off and run trialm launch --check")
 		s.Emit("setup_log", setup.Update{Lines: []string{"Calibration was not saved · Low Power Mode is on"}})
-	} else if err := calib.RecordReal(ctx, store.Default().Dir, enginePath, calib.RealMeasurement{Model: p.Model, Quant: p.Quant, Engine: p.Runtime, Decode: j.Report.DecodeTPS, Prefill: j.Report.PrefillTPS, Samples: j.Report.Samples}); err == nil {
+	} else if err := calib.RecordReal(ctx, store.Default().Dir, enginePath, calib.RealMeasurement{Cache: p.KVCacheType, Model: p.Model, Quant: p.Quant, Engine: p.Runtime, Decode: j.Report.DecodeTPS, Prefill: j.Report.PrefillTPS, Samples: j.Report.Samples}); err == nil {
 		s.Emit("setup_calibrated", true)
 	} else {
 		s.Emit("setup_log", setup.Update{Lines: []string{"Calibration was not saved · " + err.Error()}})

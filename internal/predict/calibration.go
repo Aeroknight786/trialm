@@ -174,7 +174,7 @@ func applyMachineCalibration(r *Result, in Input, c *calib.Calibration) {
 					prompt = 512
 				}
 				return r.Timing.PrefillTPS(row.Depth, row.Depth+prompt)
-			})
+			}, r.Settings.KVCacheType)
 			if found {
 				usedReal = true
 				f, ok = real, true

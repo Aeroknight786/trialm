@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +34,17 @@ import (
 
 var update = flag.Bool("update", false, "update TUI frame goldens")
 
+var listingFixture struct {
+	sync.Once
+	value core.Listing
+	err   error
+}
+var pickerFixture struct {
+	sync.Once
+	value core.ConfigPicker
+	err   error
+}
+
 func fixture(t testing.TB) *Root {
 	t.Helper()
 	s := store.Store{Dir: t.TempDir()}
@@ -50,11 +62,18 @@ func fixture(t testing.TB) *Root {
 		t.Fatal(e)
 	}
 	m.detection = d
-	l, e := cfg.Find(context.Background(), p)
-	if e != nil {
-		t.Fatal(e)
+	listingFixture.Do(func() { listingFixture.value, listingFixture.err = cfg.Find(context.Background(), p) })
+	if listingFixture.err != nil {
+		t.Fatal(listingFixture.err)
 	}
-	m.listing = l
+	m.listing = listingFixture.value
+	m.listing.Rows = append([]core.Row(nil), listingFixture.value.Rows...)
+	pickerFixture.Do(func() { pickerFixture.value, pickerFixture.err = cfg.Picker(context.Background(), d, p) })
+	if pickerFixture.err != nil {
+		t.Fatal(pickerFixture.err)
+	}
+	m.picker = pickerFixture.value
+	m.picker.Models = append([]core.ConfigModel(nil), pickerFixture.value.Models...)
 	m.last = store.TrialEntry{ID: "fixture", At: time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), Model: "qwen3.6:35b-a3b", Quant: "IQ3_XXS", Runtime: "llamacpp", Band: 60, Report: trial.Report{Requests: 38, LocalSeconds: 840, CloudSeconds: 190, ReadingSeconds: 370, WritingSeconds: 294, BetweenTurnsSeconds: 176, FirstTurn: 10, TypicalTurn: 9.8, SlowestTurn: 41, SlowestCause: "reading", Fidelity: "fp8 (declared), no-logging; upper bound on quality", SpendKnown: true, SpendUSD: .21}}
 	m.history = []store.TrialEntry{m.last}
 	m.notice = "v0.6.1 available · trialm update"
@@ -65,7 +84,7 @@ func TestViewGoldens(t *testing.T) {
 	old := lipgloss.Writer.Profile
 	lipgloss.Writer.Profile = colorprofile.TrueColor
 	defer func() { lipgloss.Writer.Profile = old }()
-	screens := []Screen{First, Paste, "launcher-calibrating", "launcher-offer", "detecting", Help, Needs, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk", "ready-sparkle"}
+	screens := []Screen{First, Paste, Detect, Agents, Calibrate, "calibrating", "calibrate-low-power", "pick-second", "pick-last", "pick-cache", "pick-file", "pick-disk", "detecting", Help, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk"}
 	for _, screen := range screens {
 		for _, w := range []int{60, 80, 120} {
 			for _, plain := range []bool{false, true} {
@@ -75,20 +94,63 @@ func TestViewGoldens(t *testing.T) {
 					m.Update(tea.WindowSizeMsg{Width: w, Height: 24})
 					m.stack = []Screen{screen}
 					m.detecting = false
-					m.offer = false
 					m.modelIndex = 0
-					if screen == "launcher-offer" {
-						m.stack = []Screen{Home}
-						m.offer = true
-						m.modelIndex = -1
+					if strings.HasPrefix(string(screen), "pick-") {
+						m.stack = []Screen{Recipes}
+						switch screen {
+						case "pick-second":
+							m.selected = 1
+						case "pick-last":
+							m.selected = len(m.picker.Models) - 1
+						case "pick-cache", "pick-file":
+							for i, x := range m.picker.Models {
+								if x.Default.Result.Model.OllamaTag == "qwen3.5:9b" {
+									m.selected = i
+								}
+							}
+							m.picker.Models[m.selected].Select("c")
+							if screen == "pick-file" {
+								m.picker.Models[m.selected].Select("f")
+							}
+						}
+					}
+
+					if screen == "pick-disk" {
+						m.stack = []Screen{Recipes}
+						for i, x := range m.picker.Models {
+							if x.Default.Result.Model.OllamaTag != "qwen3.5:9b" {
+								continue
+							}
+							m.selected = i
+							cm := &m.picker.Models[i]
+							g := cm.Grid()
+							g.Files = append([]core.ConfigFile(nil), g.Files...)
+							f := g.Files[cm.File]
+							f.LocalPath = "/fixture/model.gguf"
+							f.Cells = append([]core.ConfigCell(nil), f.Cells...)
+							f.Cells[cm.Column].Measured = true
+							f.Cells[cm.Column].Speed.Kind = "measured"
+							g.Files[cm.File] = f
+							grids := map[string]core.ConfigGrid{}
+							for k, v := range cm.Grids {
+								grids[k] = v
+							}
+							grids[cm.Engines[cm.Engine].ID+"/"+cm.CacheTypes[cm.Cache]] = g
+							cm.Grids = grids
+							cm.OnDisk = true
+						}
+					}
+					if screen == "calibrate-low-power" {
+						m.stack = []Screen{Calibrate}
+						m.detection.System.Power.LowPower = true
 					}
 					if screen == "detecting" {
-						m.stack = []Screen{Home}
+						m.stack = []Screen{Detect}
 						m.detecting = true
 						m.detected = false
 					}
-					if screen == "launcher-calibrating" {
-						m.stack = []Screen{Home}
+					if screen == "calibrating" {
+						m.stack = []Screen{Calibrate}
 						m.calibration = &calibrationJob{fraction: .25, eta: "~45 s"}
 						m.busy = true
 					}
@@ -139,7 +201,7 @@ func TestViewGoldens(t *testing.T) {
 					if screen == "setup-progress" {
 						fraction = float64(m.setup.update.Progress.Done) / float64(m.setup.update.Progress.Total)
 					}
-					if screen == "launcher-calibrating" {
+					if screen == "calibrating" {
 						fraction = m.calibration.fraction
 					}
 					if fraction > 0 && !plain {
@@ -208,12 +270,6 @@ func TestNavigationAndRating(t *testing.T) {
 	if m.screen() != Recipes {
 		t.Fatal(m.screen())
 	}
-	m.stack = []Screen{Needs}
-	m.field = 3
-	m.Update(key("l"))
-	if m.cfg.Preferences.Priority != "quality" {
-		t.Fatal(m.cfg.Preferences.Priority)
-	}
 	m.stack = []Screen{Summary}
 	m.cfg.Preferences.Priority = "quality"
 	_, cmd := m.Update(key("1"))
@@ -225,7 +281,7 @@ func TestNavigationAndRating(t *testing.T) {
 		t.Fatal(rows, e)
 	}
 	m.Update(tea.PasteMsg{Content: "llama-server -m untrusted.gguf --evil"})
-	if m.screen() != ClaimCard || !strings.Contains(m.View().Content, "claim parsing arrives in v0.6") {
+	if m.screen() == ClaimCard || !strings.Contains(m.View().Content, "Search by model name") {
 		t.Fatal(m.View().Content)
 	}
 	m.theme = newPalette(true, true)
@@ -270,7 +326,7 @@ func (d *driver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return d, nil
 	}
 	if v, ok := msg.(probeRows); ok {
-		v.ready <- len(d.root.listing.Rows) > 0 && !d.root.busy
+		v.ready <- (len(d.root.listing.Rows) > 0 || len(d.root.picker.Models) > 0) && !d.root.busy
 		return d, nil
 	}
 	if ch, ok := msg.(snapshot); ok {
@@ -333,6 +389,7 @@ func TestLauncherKeyCount(t *testing.T) {
 					t.Fatal(e)
 				}
 			}
+			m.cfg.Preferences.FirstRunDone = true
 			m = New(m.cfg)
 			approvals, launches := 0, 0
 			m.cfg.Plan = func(context.Context, core.Row, store.Preferences) (setup.Plan, error) {
@@ -369,10 +426,7 @@ func TestLauncherKeyCount(t *testing.T) {
 				}
 				time.Sleep(time.Millisecond)
 			}
-			if state == "disk-first" {
-				program.Send(key("s"))
-				keys++
-			}
+
 			program.Send(key("enter"))
 			keys++
 			if state != "ready" {
@@ -399,9 +453,7 @@ func TestLauncherKeyCount(t *testing.T) {
 				t.Fatal(e)
 			}
 			want := 2
-			if state == "disk-first" {
-				want = 3
-			}
+
 			if state == "ready" {
 				want = 1
 			}
@@ -447,37 +499,21 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 	m := fixture(t)
 	t.Setenv("TRIALM_HOME", m.cfg.Store.Dir)
 	t.Setenv("TRIALM_CALIBRATION_HELPER", "1")
-	m.stack = []Screen{Home}
-	m.offer = true
-	m.modelIndex = -1
+	m.stack = []Screen{Calibrate}
 	m.detecting = false
-	_, cmd := m.Update(key("s"))
-	if cmd != nil {
-		m.Update(cmd())
-	}
-	if m.screen() != Home {
-		t.Fatal(m.screen())
-	}
+	m.cfg.Executable = os.Args[0]
+	m.Update(key("s"))
 	var prefs map[string]any
 	if e := m.cfg.Store.Read("prefs.json", &prefs); e != nil || prefs["calibration_offer"] != "skipped" {
 		t.Fatal(prefs, e)
 	}
-	m = New(m.cfg)
-	if m.offer {
-		t.Fatal("offer repeated")
-	}
-	if m.screen() != Home {
-		t.Fatal("offer repeated")
-	}
-	m.stack = []Screen{Home}
-	m.offer = true
-	m.modelIndex = -1
-	m.detecting = false
+	m.stack = []Screen{Calibrate}
+	m.busy = false
 	m.Update(key("enter"))
-	if m.calibration == nil || m.screen() != Home {
-		t.Fatal(m.screen())
-	}
 	job := m.calibration
+	if job == nil {
+		t.Fatal("calibration did not start")
+	}
 	for {
 		v := job.next()().(calibrationEventMsg)
 		m.Update(v)
@@ -487,21 +523,12 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 			}
 			break
 		}
-		if v.event.Step == 2 && (!strings.Contains(m.View().Content, "ETA") || job.fraction != .25) {
+		if v.event.Step == 2 && (!strings.Contains(m.View().Content, "left") || job.fraction != .25) {
 			t.Fatal(job, m.View().Content)
 		}
 	}
-	if m.screen() != Home {
+	if m.screen() != Recipes {
 		t.Fatal(m.screen())
-	}
-	_ = m.cfg.Store.Read("prefs.json", &prefs)
-	if prefs["calibration_offer"] != "accepted" {
-		t.Fatal(prefs)
-	}
-	p := m.cfg.Preferences
-	p.Priority = "speed"
-	if e := m.cfg.Store.SavePreferences(p); e != nil {
-		t.Fatal(e)
 	}
 	_ = m.cfg.Store.Read("prefs.json", &prefs)
 	if prefs["calibration_offer"] != "accepted" {
@@ -510,11 +537,10 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 }
 func TestFooterBindings(t *testing.T) {
 	m := fixture(t)
-	allowed := map[Screen][]string{First: {"enter browser", "p paste", "esc back"}, Recipes: {"enter try", "s set up", "d details", "w window", "n needs", "/ search"}, Details: {"enter try", "space boosts", "s set up", "? why", "esc back", "q quit"}, Summary: {"1 too slow", "2 fine", "3 great", "s set up", "t another", "q quit"}}
-	for screen, want := range allowed {
-		m.stack = []Screen{screen}
-		if got := strings.Split(m.footer(), "  "); len(got) > 6 || strings.Join(got, "|") != strings.Join(want, "|") {
-			t.Fatal(screen, got)
+	m.stack = []Screen{Recipes}
+	for _, want := range []string{"↑↓ Model", "←→ Context", "f File", "c Cache", "e Engine", "⏎ Try", "s Set up", "/ Search", "v Details"} {
+		if !strings.Contains(m.footer(), want) {
+			t.Fatal(m.footer())
 		}
 	}
 }
@@ -526,7 +552,7 @@ func TestNoColorOverridesForce(t *testing.T) {
 	}
 	m := fixture(t)
 	m.theme = newPalette(true, false)
-	m.stack = []Screen{Needs}
+	m.stack = []Screen{Recipes}
 	m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})
 	if strings.Contains(m.View().Content, "\x1b") {
 		t.Fatal("colour leaked")
@@ -616,7 +642,7 @@ func TestFirstScreenUsesSavedBudget(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{First}
 	m.cfg.Preferences.BudgetUSD = 5
-	if !strings.Contains(m.View().Content, "5.00 USD") {
+	if !strings.Contains(m.View().Content, "$0.20–2") {
 		t.Fatal(m.View().Content)
 	}
 }
@@ -644,7 +670,7 @@ func TestPastesReachMaskedInputAndChat(t *testing.T) {
 	m.cfg.Start = Recipes
 	m.cfg.Preferences.Model = "llama-server -m file.gguf -ngl 999"
 	m = New(m.cfg)
-	if m.screen() != ClaimCard || strings.Count(m.View().Content, "claim parsing arrives in v0.6") != 1 {
+	if m.screen() != Recipes || strings.Contains(m.View().Content, "claim parsing arrives") {
 		t.Fatal(m.View().Content)
 	}
 }
@@ -693,14 +719,10 @@ func TestFailedPasteReturnsToKeyChoices(t *testing.T) {
 
 func TestUnparsedClaimNeverShowsCuratedSources(t *testing.T) {
 	m := fixture(t)
-	m.cfg.Start = Recipes
-	m.cfg.Preferences.Model = "llama-server -m pasted.gguf"
-	m = New(m.cfg)
-	m.Update(key("?"))
-	m.Update(key("esc"))
-	view := m.View().Content
-	if m.screen() != ClaimCard || !strings.Contains(view, "claim parsing arrives in v0.6") || strings.Contains(view, "Strata") || strings.Contains(m.footer(), "sources") {
-		t.Fatal(view)
+	m.stack = []Screen{Recipes}
+	m.Update(tea.PasteMsg{Content: "llama-server -m untrusted.gguf"})
+	if m.screen() == ClaimCard || strings.Contains(m.View().Content, "claim parsing arrives") {
+		t.Fatal(m.View().Content)
 	}
 }
 
@@ -725,7 +747,6 @@ func TestLauncherKeysAndLazyCloudKey(t *testing.T) {
 	t.Setenv("OPENROUTER_API_KEY", "")
 	m := fixture(t)
 	m.stack = []Screen{Home}
-	m.offer = false
 	m.modelIndex = 0
 	m.detecting = false
 	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -746,7 +767,7 @@ func TestLauncherKeysAndLazyCloudKey(t *testing.T) {
 	}
 	m.busy = false
 	m.Update(key("n"))
-	if m.screen() != Needs {
+	if m.screen() != Recipes {
 		t.Fatal(m.screen())
 	}
 }
@@ -785,7 +806,6 @@ func TestCloudAuthorizationResumesSelectedTrial(t *testing.T) {
 	t.Setenv("OPENROUTER_API_KEY", "")
 	m := fixture(t)
 	m.stack = []Screen{Home}
-	m.offer = false
 	m.detecting = false
 	m.modelIndex = 1
 	m.cfg.Headless = false

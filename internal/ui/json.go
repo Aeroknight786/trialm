@@ -42,10 +42,18 @@ func (r *Renderer) Handle(e core.Event) {
 			if u, ok := e.Data.(setup.Update); ok {
 				_, r.Err = fmt.Fprintf(r.Out, "%d/%d %s · %s · %s\n", u.Index, u.Total, u.Kind, u.Title, u.State)
 			}
+		case "setup_log":
+			if u, ok := e.Data.(setup.Update); ok {
+				for _, line := range u.Lines {
+					_, r.Err = fmt.Fprintln(r.Out, line)
+				}
+			}
 		case "setup_progress":
 			if u, ok := e.Data.(setup.Update); ok && u.Progress != nil {
 				p := u.Progress
-				if p.Reused != "" { // plain lines: one per 2 s, plus reuse and the end
+				if u.Kind == setup.Calibrate {
+					_, r.Err = fmt.Fprintf(r.Out, "Calibrating %d of %d · ETA %s\n", p.Done, p.Total, dur(p.ETA))
+				} else if p.Reused != "" { // plain lines: one per 2 s, plus reuse and the end
 					_, r.Err = fmt.Fprintf(r.Out, "Already on disk, no download · %s\n", p.Reused)
 				} else if time.Since(r.shown) >= 2*time.Second || p.Done == p.Total {
 					r.shown = time.Now()
@@ -85,6 +93,9 @@ func (r *Renderer) Handle(e core.Event) {
 		if u, ok := e.Data.(setup.Update); ok && u.Progress != nil {
 			p := u.Progress
 			payload = map[string]any{"index": figure.Exact(float64(u.Index), "count", figure.Measured, "setup:journal"), "total": figure.Exact(float64(u.Total), "count", figure.Measured, "setup:journal"), "bytes": figure.Exact(float64(p.Done), "bytes", figure.Measured, "download:progress"), "total_bytes": figure.Exact(float64(p.Total), "bytes", figure.Measured, "download:progress"), "rate": figure.Exact(p.BytesPerSec, "bytes/s", figure.Measured, "download:progress"), "eta": figure.Exact(p.ETA.Seconds(), "s", figure.Measured, "download:progress")}
+			if u.Kind == setup.Calibrate {
+				payload = map[string]any{"kind": u.Kind, "index": figure.Exact(float64(u.Index), "count", figure.Measured, "setup:journal"), "fraction": figure.Exact(u.Fraction, "fraction", figure.Measured, "calibrate:progress"), "done": figure.Exact(float64(p.Done), "groups", figure.Measured, "calibrate:progress"), "total": figure.Exact(float64(p.Total), "groups", figure.Measured, "calibrate:progress"), "eta": figure.Exact(p.ETA.Seconds(), "s", figure.Measured, "calibrate:progress")}
+			}
 		}
 	}
 	event := map[string]any{"v": 1, "type": e.Type, "data": payload}

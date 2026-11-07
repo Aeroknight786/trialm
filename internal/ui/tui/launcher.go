@@ -3,16 +3,18 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/aeroknight786/trialm/internal/calib"
 	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/harness"
-	"os"
 )
 
-func toolName(id string) string { return strings.TrimSuffix(harness.DisplayName(id), " CLI") }
+func toolName(id string) string {
+	if id == "generic" {
+		return "Your own agent"
+	}
+	return strings.TrimSuffix(harness.DisplayName(id), " CLI")
+}
 func (m *Root) card(text string) string {
 	border := lipgloss.RoundedBorder()
 	if m.theme.ascii {
@@ -42,7 +44,7 @@ func (m *Root) launcher() string {
 	}
 	b := m.card(header) + "\n"
 	if m.detection.System != nil && m.detection.System.Power.LowPower {
-		b += m.theme.caveat.Render("  Low Power Mode is on: local models run about 3× slower. Turn it off in System Settings → Battery.") + "\n"
+		b += m.theme.caveat.Render("  Low Power Mode | Expect Slower Speeds") + "\n"
 	}
 	if m.detecting {
 		lines := []string{"machine", "coding tools", "engines", "models on disk"}
@@ -54,16 +56,6 @@ func (m *Root) launcher() string {
 			b += "\n  " + mark + " " + line
 		}
 		return b
-	}
-	if m.calibration != nil {
-		elapsed := time.Since(m.started).Round(time.Second).String() // "6s", "2m10s"
-		b += "\n" + m.card(m.waiting()+" Calibrating this machine\n"+m.progressBar(m.calibration.fraction)+"\nElapsed "+elapsed+" · ETA "+m.calibration.eta) + "\n"
-	} else if m.offer {
-		label := "✦ Calibrate this machine once · recommended"
-		if m.detection.Target.OS == "darwin" {
-			label = "✦ Calibrate this Mac once · recommended"
-		}
-		b += "\n" + m.card(m.theme.selected.Bold(true).Render(label)+"\n"+calib.Duration(calib.Plan(false, os.Getenv("TRIALM_CALIBRATE_SPEC") != "0"))+" · no downloads · enter start · s skip") + "\n"
 	}
 	b += "\n  " + m.theme.selected.Bold(true).Render("Your models") + "\n"
 	for i, choice := range m.models {

@@ -59,3 +59,21 @@ func TestRealIntervalsRoundTrip(t *testing.T) {
 		t.Fatal(legacy.Rows)
 	}
 }
+
+func TestRealEvidenceSeparatesCacheTypes(t *testing.T) {
+	c := Calibration{}
+	for _, cache := range []string{"f16", "q8_0"} {
+		speed := 20.
+		if cache == "q8_0" {
+			speed = 30
+		}
+		c.appendReal(RealMeasurement{Model: "model", Quant: "Q4", Engine: "llamacpp", Cache: cache, Samples: []RealSample{{Mode: "decode", Depth: 65536, Speed: speed}}})
+	}
+	for _, cache := range []string{"f16", "q8_0", "q4_0"} {
+		got, ok := c.RealFactor("model", "Q4", "llamacpp", "decode", func(Row) float64 { return 10 }, cache)
+		want := map[string]float64{"f16": 2, "q8_0": 3}[cache]
+		if ok != (want > 0) || got.Multiplier != want {
+			t.Fatal(cache, got, ok)
+		}
+	}
+}

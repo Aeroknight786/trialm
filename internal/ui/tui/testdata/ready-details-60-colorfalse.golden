@@ -1,19 +1,23 @@
-╭────────────────────────────────────────────────────────╮
-│ ✦ Ready · Qwen3.6 35B-A3B                              │
-│                                                        │
-│                          measured       predicted      │
-│ Writing at start            40 tok/s       ~44 tok/s   │
-│ Writing at 40K              31 tok/s       ~36 tok/s   │
-│ Reading                    660 tok/s      ~800 tok/s   │
-│ ✓ Codex · harness                                      │
-│                                                        │
-│ Slower than modeled at 40K · saved for future picks    │
-│                                                        │
-│ sha256 checked                                         │
-│ archive extracted                                      │
-│ download resumed                                       │
-│ range accepted                                         │
-│ 8.1 GB received                                        │
-╰────────────────────────────────────────────────────────╯
+✦ Ready
 
-enter open Codex now  d details  q later
+Qwen3.6 35B-A3B · Codex · 40K context
+
+╭─────────────────╮╭─────────────────╮╭─────────────────╮
+│Per reply        ││First reply      ││Codex            │
+│~9.6 s           ││~21 s            ││Works            │
+│est. 8.3         ││est. 18          ││Chat · Tools ·   │
+│                 ││                 ││Follow-up        │
+╰─────────────────╯╰─────────────────╯╰─────────────────╯
+
+Next time: trialm
+
+✓ harness: greeting · tool call · follow-up
+
+sha256 checked
+archive extracted
+download resumed
+range accepted
+8.1 GB received
+Reply times use measured speeds and the agent's reply length
+
+⏎ Open Codex now    q Later    v Details

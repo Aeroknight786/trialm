@@ -2,14 +2,15 @@ package tui
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
-	"charm.land/lipgloss/v2"
 	"github.com/aeroknight786/trialm/internal/core"
+	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/predict"
+	"github.com/aeroknight786/trialm/internal/ui/tui/pick"
 	"github.com/charmbracelet/x/ansi"
+	"strconv"
 )
 
 func wrap(s string, w int) string { return ansi.Wrap(s, max(1, w), "") }
@@ -27,40 +28,29 @@ func metric(r predict.Result, v float64, unit string, reading bool) figure.Figur
 func (m *Root) body() string {
 	title := m.theme.wordmark()
 	switch m.screen() {
+	case Detect:
+		return m.detectBody()
+	case Agents:
+		return m.agentsBody()
+	case Calibrate:
+		return m.calibrationBody()
 	case First:
-		return title + "\n\nTry it in the cloud first\nConnect OpenRouter to start a private trial.\nTrial cap " + figure.Exact(m.cfg.Preferences.BudgetUSD, "USD", figure.Measured, "prefs:budget").String() + "."
+		return m.tryBody()
 	case Paste:
 		if m.password == nil {
 			return "OpenRouter key"
 		}
 		return title + "\n" + m.authURL + "\n" + m.password.View()
-	case Needs:
-		lines := []string{"What do you need? · Enter accepts every default"}
-		for i, f := range m.fields {
-			mark := m.theme.selected.Render(selection(i, m.field))
-			lines = append(lines, mark+fmt.Sprintf("%-18s", m.labels[i])+strings.TrimSpace(strings.ReplaceAll(f.View(), "\n", " ")))
-		}
-		lines = append(lines, "Native context only · YaRN choices arrive in v0.6", "Trial: no-logging providers · cap "+figure.Exact(m.cfg.Preferences.BudgetUSD, "USD", figure.Measured, "prefs:budget").String())
-		return strings.Join(lines, "\n")
 	case Recipes:
 		return m.recipes()
 	case Details:
 		return m.details()
 	case Summary:
-		if m.last.ID == "" {
-			return "No trials yet."
-		}
-		r := m.last.Report
-		partial := ""
-		if m.last.Incomplete {
-			partial = "Partial summary · window closed before the final report.\n"
-		}
-		split := m.split(r.ReadingSeconds, r.WritingSeconds, r.LoadSeconds+r.BetweenTurnsSeconds)
-		return partial + "Trial over · " + m.last.Model + " · " + m.last.Quant + " · " + m.last.Runtime + "\n" + r.Plain(m.last.Band) + split + "\nHow did it feel?"
+		return m.summaryBody()
 	case Home:
 		return m.launcher()
 	case Help:
-		return "Every key, one place\n\nLauncher\n  ↑↓ / j k select · enter run · tab cycle installed tools\n  t cloud trial · f find faster or smarter · / search · c claims\n  enter calibrate once · s skip forever\n\nRecipes\n  ↑↓ / j k select · enter trial · w trial in a window\n  s set up · n / r needs · d details · / search · c claims\n  ? figures and sources · space toggle boosts in details\n\nSetup and Ready\n  enter / y approve · enter open tool · n / esc back\n  d steps and logs · ctrl-c pause\n  u undo from Ready · q later\n\nCloud sign-in\n  enter browser / connect · p paste · esc back\n\nTrial summary\n  1 too slow · 2 fine · 3 great · s set up · t another\n\nNeeds · ↑↓ / j k / tab row · ←→ / h l change · enter apply\nSearch · enter search · esc back\nClaims · ↑↓ / j k select · enter / ? open · ? source\nErrors · d raw details\nChat · enter send · esc finish\nEverywhere · esc back · q quit · ctrl-c stop"
+		return "Keys\n\n↑↓ Model    ←→ Context    f File    c Cache    e Engine\n⏎ Try    s Set up    / Search    v Details\nEsc Back    q Later    ctrl-c Pause"
 	case Gallery:
 		b := "Published claims · unverified by triaLM · never ranked\n"
 		for i, c := range Claims() {
@@ -68,9 +58,7 @@ func (m *Root) body() string {
 		}
 		return b
 	case ClaimCard:
-		if m.pendingClaim {
-			return "Claim\nclaim parsing arrives in v0.6"
-		}
+
 		cs := Claims()
 		c := cs[min(max(0, m.selected), len(cs)-1)]
 		b := "Claim · " + c.ID + " [" + c.Grade + "]\n" + c.Hardware + "\n" + c.Recipe + "\n"
@@ -99,6 +87,9 @@ func (m *Root) body() string {
 	case Launching:
 		return "Opening " + toolName(m.cfg.Preferences.Tool) + " on the local model…"
 	case Trial:
+		if m.address != "" {
+			return m.address
+		}
 		return m.meter.String()
 	case Chat:
 		return m.chat.view()
@@ -106,46 +97,15 @@ func (m *Root) body() string {
 	return title
 }
 func (m *Root) recipes() string {
-	b := fmt.Sprintf("Recipes for %s · %s · %dk native\nSimulated or calibrated · uncertainty shown on ?\n", m.cfg.Preferences.Tool, m.cfg.Preferences.Priority, m.cfg.Preferences.Context/1024)
-	if m.detection.Target.OS == "darwin" {
-		b = fmt.Sprintf("Recipes for %s on this Mac · %s\n", toolName(m.cfg.Preferences.Tool), m.cfg.Preferences.Priority)
-		b += wrap(m.theme.dim.Render(fmt.Sprintf("First reply reads %s's opening prompt (~%sK tokens); later replies reuse it. ~ = estimate, ? = how sure.", toolName(m.cfg.Preferences.Tool), core.OpeningPromptFigure(m.listing.Scenario, m.cfg.Preferences.Tool).Number())), m.width) + "\n"
-	}
-	if len(m.listing.Rows) == 0 {
+	if m.cfg.Picker != nil {
 		if m.busy {
-			return b // the spinner line says it is still ranking
+			return "Models\n" + m.waiting() + " Loading"
 		}
-		return b + "No working recipe for these needs. Press n to change them."
+		return pick.View(&m.picker, m.selected, m.width, m.height, m.theme.plain)
 	}
-	if m.width >= 60 {
-		b += m.tableView() + "\n"
-	} else {
-		for i, row := range m.listing.Rows {
-			r := row.Result
-			b += fmt.Sprintf("%s%d %s\n  %s · %s\n  turn %s\n", selection(i, m.selected), i+1, r.Model.Name, r.Quant.Name, r.Runtime.ID, estimated(metric(r, r.Scenario.FollowUpTurn.Seconds(), "s", false), m.detection.Target.OS == "darwin"))
-		}
-	}
-	for _, row := range m.listing.Rows {
-		if strings.Contains(row.Result.Quant.Name, "IQ3") {
-			b += m.theme.caveat.Render("3-bit files: quality caveat") + "\n"
-			break
-		}
-	}
-	cs := ClaimsFor(m.detection.Target.Device.Name, m.detection.Target.OS)
-	if m.detection.Target.OS == "darwin" {
-		if len(cs) > 0 {
-			b += m.theme.dim.Render("c published claims for similar hardware") + "\n"
-		}
-	} else {
-		b += "\nClaims we can't simulate yet\n"
-		for _, c := range cs {
-			b += "  claim " + c.ID + " · " + c.Figures[0].String() + " [" + c.Grade + "]\n"
-		}
-	}
-	b += wrap(m.theme.cloud.Render("Trial: real cloud model · no-logging providers · cap "+figure.Exact(m.cfg.Preferences.BudgetUSD, "USD", figure.Measured, "prefs:budget").String()), m.width)
-	b += "\n" + m.theme.dim.Render("calibrate for tighter numbers: trialm calibrate")
-	return b
+	return "Models\nNo models fit this agent on this machine."
 }
+
 func (m *Root) details() string {
 	row, ok := m.row()
 	if !ok {
@@ -173,6 +133,12 @@ func (m *Root) details() string {
 	} else {
 		b = m.theme.caveat.Render("caveat: "+mem.Level) + "\n" + b
 	}
+	f := metric(r, r.Timing.DecodeTPS(r.Settings.ContextTokens), "t/s", false)
+	b += "\nRange " + figure.BandNumber(f.Lo, 26) + " to " + figure.BandNumber(f.Hi, 26) + " t/s\nSource: " + f.Src + "\n" + r.Accuracy.Basis
+	args, e := engine.Args(r.Runtime.ID, map[string]string{"binary": "llama-server", "model": "<model>", "name": r.Model.OllamaTag, "port": "8080", "ctx": strconv.Itoa(r.Settings.ContextTokens), "ngl": "99", "fa": "on", "kv": r.Settings.KVCacheType, "host": "127.0.0.1"})
+	if e == nil {
+		b += "\nArgv " + fmt.Sprint(args)
+	}
 	return b
 }
 func (m *Root) progressBar(v float64) string {
@@ -188,30 +154,6 @@ func (m *Root) progressBar(v float64) string {
 	return m.bar.ViewAs(v)
 }
 func (m *Root) split(read, write, fixed float64) string {
-	total := read + write + fixed
-	if total <= 0 {
-		return "Time split: no requests yet.\n"
-	}
-	a := int(math.Round(100 * read / total))
-	b := min(100-a, int(math.Round(100*write/total)))
-	label := fmt.Sprintf("reading %d%% · writing %d%% · fixed/tools %d%%", a, b, 100-a-b)
-	if m.theme.plain || m.theme.ascii {
-		return m.progressBar(read/total) + "\n" + label + "\n"
-	}
-	w := max(8, min(36, m.width-8))
-	n := int(float64(w) * read / total)
-	k := int(float64(w) * write / total)
-	bar := strings.Builder{}
-	for i := 0; i < w; i++ {
-		color := fmt.Sprintf("#%02x%02x%02x", 40+140*i/max(1, w-1), 150-70*i/max(1, w-1), 170+50*i/max(1, w-1))
-		glyph := "━"
-		if i == n || i == n+k {
-			glyph = "╷"
-		}
-		bar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(glyph))
-	}
-
-	return bar.String() + "\n" + label + "\n"
+	f := func(v float64) string { return figure.Band(v, 30, "s", figure.Simulated, "predict:turn").String() }
+	return "Reading " + f(read) + " · Writing " + f(write) + " · Other " + f(fixed) + "\n"
 }
-
-// ratingWord names the after-trial answer instead of showing a score.

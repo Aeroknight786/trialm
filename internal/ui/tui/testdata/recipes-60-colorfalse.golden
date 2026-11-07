@@ -1,14 +1,27 @@
-Recipes for Codex on this Mac · balanced
-First reply reads Codex's opening prompt (~9.0K tokens);
-later replies reuse it. ~ = estimate, ? = how sure.
-MODEL                   FILE · ENGINE       LATER REPLIES 
-❯ 1 Qwen3.6 35B-A3B     IQ3_XXS 13.2 GB · l…      16 s      
-  2 Gemma 4 26B-A4B     IQ4_XS 13.6 GB · ll…     ~19 s      
-  3 gpt-oss 20B         MLX-MXFP4 12.1 GB ·…     ~18 s      
-3-bit files: quality caveat
-c published claims for similar hardware
-Trial: real cloud model · no-logging providers · cap 2.00
-USD
-calibrate for tighter numbers: trialm calibrate
+Models  Codex · Apple M5 10c · 16 GB for models · 1 of 11
+❯ ○ Qwen3.6 35B-A3B        up to 256K  ~48 t/s   13.2 GB █
+  ○ Gemma 4 26B-A4B        up to 256K  ~29 t/s   13.6 GB │
+  ○ gpt-oss 20B            up to 128K  ~40 t/s   12.1 GB │
+  ○ Qwen3-Coder 30B-A3B    up to 130K  ~47 t/s   12.9 GB │
+  ○ GLM-4.7-Flash          up to 123K  ~45 t/s   12.9 GB │
+  ○ Gemma 4 12B            up to 256K  ~14 t/s   7.12 GB │
+  ○ Qwen3.5 9B             up to 256K  ~22 t/s   5.68 GB │
 
-enter try  s set up  d details  w window  n needs  / search
+╭────────────────────────────────────────────────────────╮
+│Qwen  Qwen3.6 35B-A3B  estimate                         │
+│KV cache  [f16] q8_0 q4_0                               │
+│Engine    [llama.cpp]                                   │
+│                                                        │
+│t/s when full     32K         64K         128K          │
+│→ more                                                  │
+│IQ3_XXS           ~23 t/s     [~15 t/s]   ~8.7 t/s      │
+│13.2 GB           13.6 GB     [14.2 GB]   15.5 GB       │
+│5 larger files don't fit                                │
+│                                                        │
+│Speed   ~48 t/s empty → ~15 t/s at 64K                  │
+│First reply  ~18 s                                      │
+│Memory  ██████████████████░░  14.2 of 16 GB             │
+╰────────────────────────────────────────────────────────╯
+
+↑↓ Model   ←→ Context   f File   c Cache   e Engine   ⏎ Try
+s Set up   / Search   v Details   esc Back

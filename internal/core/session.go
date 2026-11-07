@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/aeroknight786/trialm/internal/catalog"
+	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/hw"
+	"github.com/aeroknight786/trialm/internal/paths"
 	"github.com/aeroknight786/trialm/internal/predict"
 )
 
@@ -44,9 +46,10 @@ type Options struct {
 	Probe, Tuned                                 bool
 }
 type Detection struct {
-	System   *hw.System            `json:"system"`
-	Target   predict.Target        `json:"target"`
-	Runtimes []hw.InstalledRuntime `json:"runtimes"`
+	SharedEngine bool                  `json:"-"`
+	System       *hw.System            `json:"system"`
+	Target       predict.Target        `json:"target"`
+	Runtimes     []hw.InstalledRuntime `json:"runtimes"`
 }
 
 func (s Session) Detect(ctx context.Context, o Options) (Detection, error) {
@@ -70,6 +73,8 @@ func (s Session) Detect(ctx context.Context, o Options) (Detection, error) {
 		d.Target.Name = "what-if: " + d.Target.Name
 	} else {
 		d.Runtimes = hw.DetectRuntimes(ctx)
+		home, _ := paths.Home()
+		d.SharedEngine = engine.SharedInstalled(home, d.Target.OS)
 	}
 	s.Emit("detect", d)
 	return d, nil

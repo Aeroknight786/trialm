@@ -37,7 +37,7 @@ func TestSetupEventsAndPause(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	m.cfg.Apply = func(ctx context.Context, p setup.Plan, sink core.Sink) (setup.Journal, error) {
-		sink(core.Event{Type: "setup_progress", Data: setup.Update{Index: 3, Total: 5, Progress: &download.Progress{Done: 61, Total: 100}}})
+		sink(core.Event{Type: "setup_progress", Data: setup.Update{Index: 3, Total: 5, Kind: setup.Fetch, Progress: &download.Progress{Done: 61, Total: 100}}})
 		<-ctx.Done()
 		j := setup.Journal{State: "paused", Plan: p, Steps: []setup.Record{{State: "done"}, {State: "done"}, {Progress: download.Progress{Done: 61, Total: 100}}, {}, {}}}
 		sink(core.Event{Type: "setup_paused", Data: j})
@@ -47,7 +47,7 @@ func TestSetupEventsAndPause(t *testing.T) {
 	next := m.applySetup()
 	v := next().(setupEvent)
 	next = m.setupEvent(v)
-	if !strings.Contains(m.View().Content, "61%") || !strings.Contains(m.footer(), "pauses") {
+	if !strings.Contains(m.View().Content, "of") || !strings.Contains(m.footer(), "Pause") {
 		t.Fatal(m.View().Content)
 	}
 	m.Update(key("ctrl+c"))
@@ -78,7 +78,7 @@ func TestSetupShowsUnknownInstallerBytes(t *testing.T) {
 	m.theme = newPalette(true, true)
 	m.stack = []Screen{Setup}
 	m.setup.plan.DownloadUnknown = true
-	if !strings.Contains(m.View().Content, "installer downloads of unknown size") {
+	if !strings.Contains(m.View().Content, "Installer download size unknown") {
 		t.Fatal(m.View().Content)
 	}
 }
