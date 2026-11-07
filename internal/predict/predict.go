@@ -30,7 +30,7 @@ var decodeTab = map[string]decodeEff{
 	"rocm":   {0.64, 0.24},
 	"vulkan": {0.75, 0.88},
 	"sycl":   {0.70, 0.50},
-	"mlx":    {0.85, 3.00}, // little data: Metal-like assumption
+	"mlx":    {0.85, 4.25}, // Metal's; the mlx-lm profile's decode_mult carries the measured difference
 	"cpu":    {0.29, 0.00}, // vs SoC/DRAM spec; x86 with probe uses measured bandwidth
 }
 

@@ -116,6 +116,8 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 		name := e.Name
 		if e.ID == "llamacpp" {
 			name = "llama.cpp"
+		} else if e.ID == "mlx-lm" {
+			name = "MLX"
 		}
 		engines = append(engines, name)
 	}

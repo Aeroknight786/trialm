@@ -41,6 +41,10 @@ func (c Client) Fetch(ctx context.Context, r Request) (Result, error) {
 	if err := os.MkdirAll(filepath.Dir(r.Dest), 0755); err != nil {
 		return result, err
 	}
+	if matches(ctx, r.Dest, r.Size, r.SHA256) { // already here, e.g. a re-planned setup
+		result.Reused = r.Dest
+		return result, nil
+	}
 	for _, path := range r.Reuse {
 		if ctx.Err() != nil {
 			return result, ctx.Err()

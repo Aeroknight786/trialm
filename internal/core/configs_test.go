@@ -11,6 +11,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/store"
 	"github.com/aeroknight786/trialm/internal/verify"
+	"slices"
 	"testing"
 	"time"
 )
@@ -30,7 +31,7 @@ func TestConfigTables(t *testing.T) {
 	for _, name := range []string{"small cache only", "native limit", "many files", "measured"} {
 		t.Run(name, func(t *testing.T) {
 			m, rt, target, sc := gridFixture(t)
-			m.Quants = m.Quants[:1]
+			m.Quants = slices.Clone(m.Quants[:1]) // a copy: appends below must not reach the catalog
 			q := m.Quants[0]
 			local := map[string]string{q.Name: "on-disk.gguf"}
 			var evidence *calib.Calibration
@@ -175,5 +176,28 @@ func TestReadyDurationUsesPlanRatesAndSamples(t *testing.T) {
 	p.Predicted.DecodeTPS0 = 2
 	if got := ReadyDuration(p); got <= 20*time.Minute {
 		t.Fatal("tool samples missing", got)
+	}
+}
+
+func TestMLXGridFiles(t *testing.T) {
+	m, _, target, sc := gridFixture(t)
+	mlx, _ := engine.Get("mlx-lm")
+	coder, _ := catalog.Lookup("qwen3:14b")
+	if !hasFile(m, mlx) || hasFile(coder, mlx) {
+		t.Fatal("MLX is offered only for files with a known repository")
+	}
+	var names []string
+	for _, f := range BuildConfigGrid(m, mlx, "f16", target, sc, nil, nil).Files {
+		names = append(names, f.Name)
+	}
+	if len(names) != 2 || names[0] != "MLX-8bit" || names[1] != "MLX-4bit" {
+		t.Fatal(names)
+	}
+	big, _ := catalog.Lookup("qwen3.6:35b-a3b")
+	if g := BuildConfigGrid(big, mlx, "f16", target, sc, nil, nil); len(g.Files) != 0 || g.Folded != 1 {
+		t.Fatal("the 20.4 GB MLX file cannot fit 16 GB", g.Files, g.Folded)
+	}
+	if q, _ := m.Quant("MLX-4bit"); m.MLXRepo(q) != "mlx-community/Qwen3.5-9B-MLX-4bit" {
+		t.Fatal(m.MLXRepo(q))
 	}
 }

@@ -206,7 +206,7 @@ func (f rtFinder) llamaCpp(ctx context.Context) *InstalledRuntime {
 }
 
 func (f rtFinder) mlxLM(ctx context.Context) *InstalledRuntime {
-	exe, src := f.find([]string{"mlx_lm.server", "mlx_lm.generate", "mlx_lm"},
+	exe, src := f.find([]string{"mlx_lm.server"},
 		f.under(f.home, ".local", "bin", "mlx_lm.server"), "/opt/homebrew/bin/mlx_lm.server")
 	if exe == "" {
 		return nil

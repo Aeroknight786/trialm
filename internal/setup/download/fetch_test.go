@@ -193,3 +193,17 @@ func TestCopyFallback(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A destination that already matches is kept: a re-planned setup must not
+// download it again (the URL is unreachable on purpose).
+func TestExistingDestination(t *testing.T) {
+	b := []byte("model")
+	dest := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(dest, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	result, err := (Client{}).Fetch(context.Background(), Request{URL: "http://127.0.0.1:1/never", SHA256: digest(b), Size: int64(len(b)), Dest: dest})
+	if err != nil || result.Reused != dest {
+		t.Fatal(result, err)
+	}
+}

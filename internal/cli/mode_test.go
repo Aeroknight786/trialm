@@ -19,3 +19,11 @@ func TestModeSelection(t *testing.T) {
 		}
 	}
 }
+
+// verify shares --model with the common flags; defining it twice panicked.
+func TestVerifyParsesModel(t *testing.T) {
+	t.Setenv("TRIALM_HOME", t.TempDir())
+	if err := cmdVerify([]string{"--runtime", "llamacpp"}); err == nil || err.Error() != "--model is required (the name your runtime uses, e.g. qwen3-coder:30b)" {
+		t.Fatal(err)
+	}
+}

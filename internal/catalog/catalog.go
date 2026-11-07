@@ -44,6 +44,9 @@ type Quant struct {
 	// from Name (e.g. "UD-Q4_K_M", "MXFP4_MOE", "Q4_K"); used as
 	// hf.co/<repo>:<tag> by Ollama, llama.cpp and LM Studio.
 	FileTag string `json:",omitempty"`
+	// Repo holds this file when it differs per quant: mlx-community
+	// publishes one repository per bit width.
+	Repo string `json:",omitempty"`
 }
 
 // HFTag returns the tag that selects the quant's file on Hugging Face.
@@ -192,7 +195,7 @@ var models = []Model{
 		NativeCtx: 131072, Tools: true, Thinking: true,
 		Quants: []Quant{
 			{Name: "MXFP4", Format: "gguf", FileBytes: 12_101_000_000, ReadBytesPerToken: 2_570_000_000},
-			{Name: "MLX-MXFP4", Format: "mlx", FileBytes: 12_100_000_000, ReadBytesPerToken: 2_570_000_000, Estimated: true},
+			{Name: "MLX-MXFP4", Format: "mlx", FileBytes: 12_076_207_568, ReadBytesPerToken: 2_570_000_000, Repo: "mlx-community/gpt-oss-20b-MXFP4-Q8"},
 		},
 		OpenRouterID: "openai/gpt-oss-20b", CloudPrecision: "MXFP4 (native release format)", QuantMatchesCloud: true,
 		HFGGUFRepo: "ggml-org/gpt-oss-20b-GGUF",
@@ -321,9 +324,33 @@ func init() {
 	}
 	for _, m := range gen {
 		if !have[m.ID] {
+			m.Quants = append(m.Quants, mlxFiles[m.ID]...)
 			models = append(models, m)
 		}
 	}
+}
+
+// mlxFiles adds MLX files to generated models (the generator writes GGUF
+// only). Sizes are each repository's safetensors total, vision weights
+// included.
+var mlxFiles = map[string][]Quant{
+	"qwen3.5-9b": {
+		{Name: "MLX-4bit", Format: "mlx", FileBytes: 5_950_221_072, Repo: "mlx-community/Qwen3.5-9B-MLX-4bit"},
+		{Name: "MLX-8bit", Format: "mlx", FileBytes: 10_426_592_423, Repo: "mlx-community/Qwen3.5-9B-MLX-8bit"},
+	},
+	"qwen3.5-4b": {
+		{Name: "MLX-4bit", Format: "mlx", FileBytes: 3_034_300_695, Repo: "mlx-community/Qwen3.5-4B-MLX-4bit"},
+		{Name: "MLX-8bit", Format: "mlx", FileBytes: 5_136_696_107, Repo: "mlx-community/Qwen3.5-4B-MLX-8bit"},
+	},
+	"qwen3.6-35b-a3b": {{Name: "MLX-4bit", Format: "mlx", FileBytes: 20_402_204_271, Repo: "mlx-community/Qwen3.6-35B-A3B-4bit"}},
+}
+
+// MLXRepo is the repository holding an MLX file, "" when none is known.
+func (m Model) MLXRepo(q Quant) string {
+	if q.Repo != "" {
+		return q.Repo
+	}
+	return m.HFMLXRepo
 }
 
 // All returns catalog models sorted by total size.

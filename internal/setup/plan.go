@@ -229,6 +229,11 @@ func Build(in Input) (Plan, error) {
 		}
 		p.LocalModelName = model
 		values["name"] = model
+		if p.Runtime == "mlx-lm" {
+			// mlx_lm.server's name for its --model; any other name is
+			// looked up (and downloaded) from Hugging Face.
+			p.LocalModelName = "default_model"
+		}
 	}
 	if in.Model.TotalParamsB > 0 {
 		p.BitsPerWeight = float64(in.Quant.FileBytes) * 8 / (in.Model.TotalParamsB * 1e9)

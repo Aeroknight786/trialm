@@ -11,6 +11,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/predict"
 	"github.com/aeroknight786/trialm/internal/store"
 	"os"
+	"os/exec"
 	"slices"
 	"sort"
 	"strings"
@@ -241,6 +242,7 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 	out := ConfigPicker{Target: d.Target, Harness: h, Scenario: h.Scenario}
 	c := CurrentCalibration(ctx, home)
 	userHome, _ := os.UserHomeDir()
+	uv := UVFound()
 	for _, row := range l.Rows {
 		if err := ctx.Err(); err != nil {
 			return out, err
@@ -250,7 +252,7 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 		}
 		cm := ConfigModel{MinContext: predict.MinContext(h.Scenario), Default: row, CacheTypes: []string{"f16", "q8_0", "q4_0"}, Grids: map[string]ConfigGrid{}}
 		for _, rt := range engine.All() {
-			if rt.ID != "llamacpp" && !l.Installed.Has(rt.ID) {
+			if rt.ID != "llamacpp" && !l.Installed.Has(rt.ID) && (rt.ID != "mlx-lm" || !uv) || !hasFile(row.Result.Model, rt) {
 				continue
 			}
 			probe := predict.Predict(predict.Input{Model: row.Result.Model, Runtime: rt, Target: d.Target, Tuned: true, Scenario: h.Scenario})
@@ -288,6 +290,18 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 
 // BuildConfigGrid uses exactly the predictor's memory and depth timing. Each
 // immutable table is cached by model/runtime/cache for the life of a picker.
+// UVFound reports whether uv is on PATH: setup installs mlx-lm with it, so
+// MLX is offered before it is installed. A variable so tests can pin it.
+var UVFound = func() bool { _, err := exec.LookPath("uv"); return err == nil }
+
+// hasFile reports whether the engine has a file it can set up (MLX files
+// need a known repository).
+func hasFile(m catalog.Model, rt engine.Profile) bool {
+	return slices.ContainsFunc(m.Quants, func(q catalog.Quant) bool {
+		return slices.Contains(rt.Formats, q.Format) && (q.Format != "mlx" || m.MLXRepo(q) != "")
+	})
+}
+
 func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict.Target, sc predict.Scenario, local map[string]string, evidence *calib.Calibration) ConfigGrid {
 	g := ConfigGrid{Contexts: []int{32768, 65536, 131072, 262144}}
 	if m.NativeCtx > 262144 {
@@ -296,7 +310,7 @@ func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict
 	quants := slices.Clone(m.Quants)
 	sort.SliceStable(quants, func(i, j int) bool { return quants[i].FileBytes > quants[j].FileBytes })
 	for _, q := range quants {
-		if !slices.Contains(rt.Formats, q.Format) {
+		if !slices.Contains(rt.Formats, q.Format) || q.Format == "mlx" && m.MLXRepo(q) == "" {
 			continue
 		}
 		// Fold only files that cannot fit even the smallest column with any cache.

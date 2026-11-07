@@ -167,6 +167,9 @@ func (s Session) PlanRecipe(ctx context.Context, r predict.Result, o Options, to
 // unless Low Power Mode would make them wrong (then it says so in the report).
 func (s Session) recordReal(ctx context.Context, j setup.Journal) {
 	p := j.Plan
+	if p.Runtime != "llamacpp" {
+		return // predictions use llama.cpp measurements only; Ready still shows the speeds
+	}
 	enginePath := ""
 	for _, step := range p.Steps {
 		if step.Kind == setup.Start && step.ID != "bridge" && len(step.Argv) > 0 {

@@ -12,6 +12,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/catalog"
 	runtime "github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/harness"
+	"github.com/aeroknight786/trialm/internal/paths"
 	"github.com/aeroknight786/trialm/internal/setup/download"
 	"github.com/aeroknight786/trialm/internal/verify"
 )
@@ -180,13 +181,16 @@ func (a *Approval) IsBoolFlag() bool       { return true }
 // fetch step reuses them after checking the digest.
 func (p Plan) OnDisk() int64 {
 	home, _ := os.UserHomeDir()
+	root, _ := paths.Home()
 	var n int64
 	for _, s := range p.Steps {
 		if s.Kind != Fetch || s.Request == nil {
 			continue
 		}
 		repo, file := hfLocation(s.Request.URL)
-		for _, c := range download.Candidates(home, repo, file, s.Request.SHA256) {
+		// The destination counts too: Fetch keeps a file that is already there.
+		dest := strings.Replace(s.Request.Dest, "~/.trialm", root, 1)
+		for _, c := range append([]string{dest}, download.Candidates(home, repo, file, s.Request.SHA256)...) {
 			if st, err := os.Stat(c); err == nil && st.Size() == s.Request.Size {
 				n += s.Request.Size
 				break

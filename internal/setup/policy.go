@@ -124,7 +124,7 @@ func (e *Executor) validate(p Plan) error {
 			}
 		}
 		if s.Kind == Install && s.Request == nil {
-			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "mlx-lm"}}
+			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "mlx-lm==0.32.2"}}
 			expected := allowed[s.Package]
 			if s.Package == "ollama-model" {
 				expected = []string{"ollama", "create", p.LocalModelName, "-f", "~/.trialm/ollama/" + p.LocalModelName + ".Modelfile"}

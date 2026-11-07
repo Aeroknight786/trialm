@@ -62,7 +62,7 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 	}
 	repo := in.Model.HFGGUFRepo
 	if in.Quant.Format == "mlx" {
-		repo = in.Model.HFMLXRepo
+		repo = in.Model.MLXRepo(in.Quant)
 	}
 	if repo == "" {
 		return in, errors.New("no Hugging Face repository is known for this model")
@@ -84,7 +84,7 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("Hugging Face metadata returned %s", resp.Status)
 		}
-		return io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+		return io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // the largest non-LFS file hashed below
 	}
 	b, err := get("https://huggingface.co/api/models/" + repo + "/revision/main?blobs=true")
 	if err != nil {
@@ -125,7 +125,7 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 		if file.LFS != nil {
 			digest = file.LFS.SHA
 			size = file.LFS.Size
-		} else if size <= 2<<20 && in.Quant.Format == "mlx" && path.Ext(file.Name) != ".safetensors" {
+		} else if size <= 10<<20 && in.Quant.Format == "mlx" && path.Ext(file.Name) != ".safetensors" { // Hugging Face moves files over 10 MB to LFS
 			config, err := get(raw)
 			if err != nil {
 				return in, err

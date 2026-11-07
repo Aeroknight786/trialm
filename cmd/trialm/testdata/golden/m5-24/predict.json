@@ -148,6 +148,148 @@
   },
   {
     "kind": "simulated",
+    "runtime": "lmstudio-mlx",
+    "tuned": false,
+    "backend": "mlx",
+    "quant": "MLX-4bit",
+    "download_gb": 20.4022043,
+    "context_tokens": 4096,
+    "memory_gb": 21.1804765,
+    "budget_gb": 17.1798692,
+    "fit": "no",
+    "decode_tps": 55.8870429,
+    "decode_tps_deep": 29.9147524,
+    "prefill_tps": 1157.01887,
+    "cold_first_reply_s": 32.3684247,
+    "follow_up_ttft_s": 3.16878986,
+    "follow_up_turn_s": 13.1972867,
+    "session_s": 574.815517,
+    "cloud_session_s": 120,
+    "decode_error_range_pct": 70,
+    "prefill_error_range_pct": 80,
+    "no_speed_claim": false,
+    "warnings": [
+      "Claude Code's ~20k-token prompt does not fit the 4096-token context (LM Studio (MLX engine) default load setting): the middle of the conversation is silently cut",
+      "does not fit: needs 19.7 GB, 16.0 GB available",
+      "quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes",
+      "MLX is not calibrated by llama-bench; these timings remain simulated"
+    ],
+    "assumptions": [
+      "keep_alive_s=3600 (unverified for this version)",
+      "overflow=truncate_middle (unverified for this version)",
+      "slots=1 (unverified for this version)"
+    ],
+    "context_note": "LM Studio (MLX engine) default load setting"
+  },
+  {
+    "kind": "simulated",
+    "runtime": "lmstudio-mlx",
+    "tuned": true,
+    "backend": "mlx",
+    "quant": "MLX-4bit",
+    "download_gb": 20.4022043,
+    "context_tokens": 57344,
+    "memory_gb": 22.2709955,
+    "budget_gb": 17.1798692,
+    "fit": "no",
+    "decode_tps": 55.8870429,
+    "decode_tps_deep": 19.6185439,
+    "prefill_tps": 1157.01887,
+    "cold_first_reply_s": 32.3684247,
+    "follow_up_ttft_s": 5.40893323,
+    "follow_up_turn_s": 20.700588,
+    "session_s": 798.423199,
+    "cloud_session_s": 120,
+    "decode_error_range_pct": 70,
+    "prefill_error_range_pct": 80,
+    "no_speed_claim": false,
+    "warnings": [
+      "does not fit: needs 20.7 GB, 16.0 GB available",
+      "quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes",
+      "MLX is not calibrated by llama-bench; these timings remain simulated"
+    ],
+    "assumptions": [
+      "keep_alive_s=3600 (unverified for this version)",
+      "overflow=truncate_middle (unverified for this version)",
+      "slots=1 (unverified for this version)"
+    ],
+    "tune_steps": [
+      "Load the MLX model with Context Length 57344",
+      "Disable idle auto-unload (JIT TTL) for the session"
+    ],
+    "context_note": "tuned for agentic use"
+  },
+  {
+    "kind": "simulated",
+    "runtime": "mlx-lm",
+    "tuned": false,
+    "backend": "mlx",
+    "quant": "MLX-4bit",
+    "download_gb": 20.4022043,
+    "context_tokens": 262144,
+    "memory_gb": 26.4652995,
+    "budget_gb": 17.1798692,
+    "fit": "no",
+    "decode_tps": 64.2700993,
+    "decode_tps_deep": 22.5613255,
+    "prefill_tps": 1157.01887,
+    "cold_first_reply_s": 31.1290098,
+    "follow_up_ttft_s": 5.40893323,
+    "follow_up_turn_s": 18.7060243,
+    "session_s": 999.933723,
+    "cloud_session_s": 120,
+    "decode_error_range_pct": 70,
+    "prefill_error_range_pct": 80,
+    "no_speed_claim": false,
+    "warnings": [
+      "does not fit: needs 24.6 GB, 16.0 GB available",
+      "quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes",
+      "MLX is not calibrated by llama-bench; these timings remain simulated"
+    ],
+    "assumptions": [
+      "overflow=error (unverified for this version)",
+      "swa_rollback=free (unverified for this version)"
+    ],
+    "context_note": "model native context (memory-limited)"
+  },
+  {
+    "kind": "simulated",
+    "runtime": "mlx-lm",
+    "tuned": true,
+    "backend": "mlx",
+    "quant": "MLX-4bit",
+    "download_gb": 20.4022043,
+    "context_tokens": 57344,
+    "memory_gb": 22.2709955,
+    "budget_gb": 17.1798692,
+    "fit": "no",
+    "decode_tps": 64.2700993,
+    "decode_tps_deep": 22.5613255,
+    "prefill_tps": 1157.01887,
+    "cold_first_reply_s": 31.1290098,
+    "follow_up_ttft_s": 5.40893323,
+    "follow_up_turn_s": 18.7060243,
+    "session_s": 723.171545,
+    "cloud_session_s": 120,
+    "decode_error_range_pct": 70,
+    "prefill_error_range_pct": 80,
+    "no_speed_claim": false,
+    "warnings": [
+      "does not fit: needs 20.7 GB, 16.0 GB available",
+      "quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes",
+      "MLX is not calibrated by llama-bench; these timings remain simulated"
+    ],
+    "assumptions": [
+      "overflow=error (unverified for this version)",
+      "swa_rollback=free (unverified for this version)"
+    ],
+    "tune_steps": [
+      "mlx_lm.server --model \u003cmlx-model\u003e"
+    ],
+    "context_note": "tuned for agentic use"
+  },
+  {
+    "kind": "simulated",
     "runtime": "ollama",
     "tuned": false,
     "backend": "metal",

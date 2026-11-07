@@ -144,44 +144,41 @@
       "model": "gpt-oss:20b",
       "model_name": "gpt-oss 20B",
       "quant": "MLX-MXFP4",
-      "runtime": "lmstudio-mlx",
-      "try_command": "trialm try gpt-oss:20b --runtime lmstudio-mlx --quant MLX-MXFP4 --harness claude-code",
+      "runtime": "mlx-lm",
+      "try_command": "trialm try gpt-oss:20b --runtime mlx-lm --quant MLX-MXFP4 --harness claude-code",
       "verdict": "usable",
       "runtime_installed": false,
       "prediction": {
         "kind": "simulated",
-        "runtime": "lmstudio-mlx",
+        "runtime": "mlx-lm",
         "tuned": true,
         "backend": "mlx",
         "quant": "MLX-MXFP4",
-        "download_gb": 12.1,
+        "download_gb": 12.0762076,
         "context_tokens": 57344,
-        "memory_gb": 14.1495044,
+        "memory_gb": 14.1257119,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 43.0600474,
-        "decode_tps_deep": 15.8936725,
+        "decode_tps": 46.9898244,
+        "decode_tps_deep": 17.9216719,
         "prefill_tps": 947.501485,
-        "cold_first_reply_s": 36.9562141,
+        "cold_first_reply_s": 35.7217076,
         "follow_up_ttft_s": 6.53636775,
-        "follow_up_turn_s": 25.4118039,
-        "session_s": 978.494778,
+        "follow_up_turn_s": 23.2758774,
+        "session_s": 898.490032,
         "cloud_session_s": 120,
         "decode_error_range_pct": 55,
         "prefill_error_range_pct": 65,
         "no_speed_claim": false,
         "warnings": [
-          "LM Studio (MLX engine) uses MLX files; using MLX-MXFP4 instead of MXFP4",
           "MLX is not calibrated by llama-bench; these timings remain simulated"
         ],
         "assumptions": [
-          "keep_alive_s=3600 (unverified for this version)",
-          "overflow=truncate_middle (unverified for this version)",
-          "slots=1 (unverified for this version)"
+          "overflow=error (unverified for this version)",
+          "swa_rollback=free (unverified for this version)"
         ],
         "tune_steps": [
-          "Load the MLX model with Context Length 57344",
-          "Disable idle auto-unload (JIT TTL) for the session"
+          "mlx_lm.server --model \u003cmlx-model\u003e"
         ],
         "context_note": "tuned for agentic use"
       }

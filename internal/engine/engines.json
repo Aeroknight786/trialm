@@ -397,10 +397,11 @@
         "kv_q8_step": "Use an 8-bit KV cache to fit the longer context: --kv-bits 8"
       },
       "perf": {
-        "decode_mult": 1.0,
+        "decode_mult": 1.15,
         "prefill_mult": 1.0,
         "load_overhead_s": 1.5,
-        "confidence": "low"
+        "confidence": "low",
+        "source": "2026-11-08, MacBook Air M5 10c, Qwen3.5 9B MLX-4bit vs llama.cpp b12182 Q4_K_M, alternating runs: writing +13-18% near empty; reading and long-context writing varied with heat (-14% to +34%), so they stay at llama.cpp's"
       },
       "notes": [
         "OpenAI Chat Completions only: harnesses that need the Anthropic or Responses API need a translation layer."
@@ -538,7 +539,7 @@
       "uv",
       "tool",
       "install",
-      "mlx-lm"
+      "mlx-lm==0.32.2"
     ],
     "mlx-remove": [
       "uv",

@@ -85,6 +85,7 @@ type Perf struct {
 	PrefillMult   float64 `json:"prefill_mult"`
 	LoadOverheadS float64 `json:"load_overhead_s"`
 	Confidence    string  `json:"confidence"`
+	Source        string  `json:"source,omitempty"` // where measured multipliers come from
 }
 
 // Profile is one runtime.

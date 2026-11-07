@@ -158,7 +158,9 @@ func cmdVerify(args []string) error {
 	var c common
 	c.register(fs, "")
 	endpoint := fs.String("endpoint", "", "runtime URL (default: the runtime's usual local port)")
-	model := fs.String("model", "", "model name as the runtime knows it")
+	// --model is a shared flag (a family filter elsewhere); here it is the
+	// name the runtime knows. Defining it again panicked.
+	model := &c.prefs.Model
 	catalogModel := fs.String("catalog-model", "", "catalog model it corresponds to (default: --model)")
 	promptTokens := fs.Int("prompt-tokens", 8000, "size of the uncached test prompt")
 	follow := fs.Int("follow-up-tokens", 1000, "new tokens in the follow-up turn")
@@ -177,7 +179,7 @@ func cmdVerify(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *model == "" {
+	if *model == "" || *model == "any" {
 		return errors.New("--model is required (the name your runtime uses, e.g. qwen3-coder:30b)")
 	}
 	if *endpoint == "" {

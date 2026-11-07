@@ -229,7 +229,8 @@ func BestFileFor(c Options, m catalog.Model, t predict.Target, sc predict.Scenar
 		}
 		filtered := rs[:0]
 		for _, r := range rs {
-			if rejectCandidate(c, r) || (c.Engines == "installed" && !in.Has(r.Runtime.ID)) {
+			// A runtime that cannot read this file predicts its default file instead.
+			if rejectCandidate(c, r) || r.Quant.Name != qn || (c.Engines == "installed" && !in.Has(r.Runtime.ID)) {
 				continue
 			}
 			filtered = append(filtered, r)
