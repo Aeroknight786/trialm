@@ -317,6 +317,9 @@ func (m *Root) readyBody() string {
 		}
 	}
 	b += "\n\n" + m.tiles([]string{"Per reply", "First reply", toolName(p.Harness)}, []string{estimated(reply), estimated(first), status}, []string{"est. " + strings.TrimPrefix(estReply.Number(), "~"), "est. " + strings.TrimPrefix(estFirst.Number(), "~"), "Chat · Tools · Follow-up"})
+	if warning := m.modelWarning(); warning != "" {
+		b += "\n\n" + warning
+	}
 	b += "\n\nNext time: trialm"
 	if m.expanded {
 		b += "\n\n" + r.Plain() + "\n" + strings.Join(m.setup.logs, "\n") + "\nReply times use measured speeds and the agent's reply length"

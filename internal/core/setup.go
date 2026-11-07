@@ -164,7 +164,8 @@ func (s Session) PlanRecipe(ctx context.Context, r predict.Result, o Options, to
 }
 
 // recordReal saves a Ready report's speeds as this machine's measurements,
-// unless Low Power Mode would make them wrong (then it says so in the report).
+// unless Low Power Mode or other loaded models would make them wrong (then it
+// says so in the report). On the owner's M5 one idle 9B elsewhere halved them.
 func (s Session) recordReal(ctx context.Context, j setup.Journal) {
 	p := j.Plan
 	enginePath := ""
@@ -179,6 +180,9 @@ func (s Session) recordReal(ctx context.Context, j setup.Journal) {
 	if hw.MacPower(ctx).LowPower {
 		j.Report.Misses = append(j.Report.Misses, "measured in Low Power Mode, so not saved as this Mac's speed; turn it off and run trialm launch --check")
 		s.Emit("setup_log", setup.Update{Lines: []string{"Calibration was not saved · Low Power Mode is on"}})
+	} else if len(hw.ModelServers(ctx, root)) > 0 {
+		j.Report.Misses = append(j.Report.Misses, "measured while other models were loaded, so not saved as this Mac's speed; close them and run trialm launch --check")
+		s.Emit("setup_log", setup.Update{Lines: []string{"Calibration was not saved · other models are loaded"}})
 	} else if err := calib.RecordReal(ctx, store.Default().Dir, enginePath, calib.RealMeasurement{Cache: p.KVCacheType, Model: p.Model, Quant: p.Quant, Engine: p.Runtime, Decode: j.Report.DecodeTPS, Prefill: j.Report.PrefillTPS, Samples: j.Report.Samples}); err == nil {
 		s.Emit("setup_calibrated", true)
 	} else {
