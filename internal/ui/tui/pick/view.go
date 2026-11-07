@@ -208,7 +208,7 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 	if focused {
 		borderColor = col
 	}
-	border := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(max(20, width-2)).BorderForeground(lipgloss.Color(borderColor))
+	border := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1).Width(max(20, width-2)).BorderForeground(lipgloss.Color(borderColor))
 	b += "\n" + border.Render(panel)
 	if plain {
 		b = ansi.Strip(b)

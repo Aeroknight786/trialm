@@ -2,11 +2,21 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/aeroknight786/trialm/internal/harness"
 )
+
+// nextTool is the agent tab switches to on the main screen (the same one
+// when there is no other).
+func (m *Root) nextTool() string {
+	if len(m.cfg.Tools) == 0 {
+		return m.cfg.Preferences.Tool
+	}
+	return m.cfg.Tools[(slices.Index(m.cfg.Tools, m.cfg.Preferences.Tool)+1)%len(m.cfg.Tools)]
+}
 
 func toolName(id string) string {
 	if id == "generic" {

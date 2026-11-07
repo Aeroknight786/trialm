@@ -804,18 +804,9 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "down", "j":
 				m.modelIndex = min(len(m.models), m.modelIndex+1)
 			case "tab":
-				next := 0
-				for i, tool := range m.cfg.Tools {
-					if tool == m.cfg.Preferences.Tool {
-						next = (i + 1) % len(m.cfg.Tools)
-						break
-					}
-				}
-				if len(m.cfg.Tools) > 0 {
-					m.cfg.Preferences.Tool = m.cfg.Tools[next]
-					if m.detection.Target.OS == "darwin" {
-						return m, m.loadModels()
-					}
+				m.cfg.Preferences.Tool = m.nextTool()
+				if m.detection.Target.OS == "darwin" {
+					return m, m.loadModels()
 				}
 			case "t":
 				return m, m.try(false)
@@ -975,8 +966,11 @@ func (m *Root) footer() string {
 	case Details:
 		return "⏎ Try    s Set up    ? Sources    esc Back    q Quit"
 	case Home:
-
-		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + "    t Cloud trial    / Search    ? Help"
+		hint := ""
+		if next := m.nextTool(); next != m.cfg.Preferences.Tool {
+			hint = "    tab " + toolName(next)
+		}
+		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    t Cloud trial    / Search    ? Help"
 	case Summary:
 		return "⏎ Install    m Other models    q Later"
 	case Gallery:
