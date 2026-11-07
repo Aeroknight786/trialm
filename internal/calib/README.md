@@ -13,7 +13,7 @@ trialm calibrate --plan --quick  # two default picks, including held-out checks
 trialm calibrate                 # run, or resume finished groups
 trialm calibrate --refit         # refit saved rows without engine/GPU access
 trialm calibrate --status
-trialm calibrate --check /path/to/model.gguf  # existing local file; no downloads
+trialm calibrate --check /path/to/model.gguf  # existing local file; no model downloads
 ```
 
 All modes accept `--json`. Plan and refit need neither hardware detection nor an

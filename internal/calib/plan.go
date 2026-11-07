@@ -58,10 +58,14 @@ func (s Step) Args(path string, cpu bool) []string {
 	if s.Group == 1 {
 		prompt, gen = "1,2,3,4", "0"
 	}
-	args := []string{"-m", path, "-p", prompt, "-n", gen, "-d", s.Depths, "-r", "3", "-o", "json", "-ngl", "99", "-fa", "on", "-lm", "mlock"}
+	ngl := "99"
+	if cpu {
+		ngl = "0"
+	}
+	args := []string{"-m", path, "-p", prompt, "-n", gen, "-d", s.Depths, "-r", "3", "-o", "json", "-ngl", ngl, "-fa", "on", "-lm", "mlock"}
 	// llama-bench's default warm-up stays enabled.
 	if cpu {
-		args = append(args, "-ngl", "0", "-dev", "none", "-nopo", "1")
+		args = append(args, "-dev", "none", "-nopo", "1")
 	}
 	return args
 }

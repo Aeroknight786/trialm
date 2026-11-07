@@ -100,20 +100,30 @@ func Build(in Input) (Plan, error) {
 	if in.Installed && in.Binary != "" {
 		binary = in.Binary
 	}
-	if p.Runtime == "llamacpp" && !(in.Installed && engine.CompatibleLlama(in.InstalledVersion)) {
-		a, err := engine.ReleaseAsset(in.OS, in.Arch, in.Backend)
+	if p.Runtime == "llamacpp" && (in.OS == "darwin" || !(in.Installed && engine.CompatibleLlama(in.InstalledVersion))) || in.Calibrate {
+		backend := in.Backend
+		if in.OS == "darwin" {
+			backend = "metal"
+		}
+		a, err := engine.ReleaseAsset(in.OS, in.Arch, backend)
 		if err != nil {
 			return p, err
 		}
 		dest := "~/.trialm/engines/" + p.Slug
-		p.Steps = append(p.Steps, Step{
-			ID:          "engine",
-			Kind:        Install,
-			Title:       "Install llama.cpp " + engine.Release(),
-			Path:        dest,
-			ArchiveRoot: a.Root,
-			Request:     &download.Request{URL: a.URL, SHA256: a.SHA256, Size: a.Size, Dest: dest + ".archive"},
-		})
+		if in.OS == "darwin" {
+			dest = "~/.trialm/engines/llama.cpp-" + engine.Release()
+		}
+		shared := in.OS == "darwin" && in.OwnedFileExists != nil && in.OwnedFileExists(".trialm/engines/llama.cpp-"+engine.Release()+"/llama-server") && in.OwnedFileExists(".trialm/engines/llama.cpp-"+engine.Release()+"/llama-bench")
+		if shared {
+			p.Warnings = append(p.Warnings, "Reuse shared llama.cpp "+engine.Release()+" · no engine download")
+		} else {
+			install := pinnedInstall(dest, a)
+			if p.Runtime != "llamacpp" {
+				install.ID = "calibration-engine"
+			}
+			p.Steps = append(p.Steps, install)
+		}
+
 		for i, support := range a.Support {
 			supportDir := fmt.Sprintf("%s-runtime-%d", dest, i)
 			p.Steps = append(p.Steps, Step{
@@ -203,6 +213,9 @@ func Build(in Input) (Plan, error) {
 		if model == "" {
 			model = asset.Dest
 		}
+	}
+	if in.Calibrate && len(in.Assets) > 0 {
+		p.Steps = append(p.Steps, calibrationStep())
 	}
 	if model == "" {
 		// Offline what-if plans describe the pending resolution and cannot execute.
@@ -358,6 +371,9 @@ func Build(in Input) (Plan, error) {
 		Endpoint, Model string
 		Context         int
 	}{p.Steps, p.Endpoint, p.LocalModelName, p.ContextTokens})
+	if in.Calibrate && len(in.Assets) == 0 {
+		p.Steps = append(p.Steps, calibrationStep())
+	}
 	p.Steps = append(p.Steps, Step{ID: "recipe", Kind: Write, Title: "Save setup recipe", Path: "~/.trialm/setups/" + p.Slug + "/recipe.json", Content: string(config)}, Step{ID: "ready", Kind: Check, Title: "Verify Ready"})
 	p.Seal()
 	return p, nil

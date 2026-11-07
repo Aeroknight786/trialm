@@ -55,7 +55,7 @@ type CheckOptions struct {
 func MatchFile(path string) (catalog.Model, catalog.Quant, error) {
 	var empty catalog.Model
 	if strings.Contains(path, "://") {
-		return empty, catalog.Quant{}, errors.New("--check needs a local GGUF; no downloads")
+		return empty, catalog.Quant{}, errors.New("--check needs a local GGUF; no model downloads")
 	}
 	st, err := os.Stat(path)
 	if err != nil {

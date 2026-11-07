@@ -57,3 +57,6 @@ type Client struct {
 // ErrDigest is returned when the bytes do not match Request.SHA256 after
 // one automatic re-fetch.
 var ErrDigest = errors.New("download: sha256 mismatch")
+
+// AvailableBytes reports disk space available to this user (-1 if unknown).
+func AvailableBytes(path string) int64 { return freeBytes(path) }

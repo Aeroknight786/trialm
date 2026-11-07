@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aeroknight786/trialm/internal/setup/download"
 	"io"
 	"os"
 	"os/exec"
@@ -133,7 +134,11 @@ func Run(ctx context.Context, o RunOptions) (*Calibration, error) {
 			continue
 		}
 		emit("step", i+1, p, "Generating or loading synthetic GGUF")
-		if free := freeBytes(o.Home); free >= 0 && free < MinFreeBytes {
+		needed := int64(MinFreeBytes)
+		if st, err := os.Stat(filepath.Join(cacheDir, p.ID()+".gguf")); err == nil {
+			needed -= st.Size()
+		}
+		if free := download.AvailableBytes(o.Home); free >= 0 && free < needed {
 			_ = save()
 			return c, fmt.Errorf("calibration needs about %d GB of free disk for its temporary files; %.1f GB is free", MinFreeBytes>>30, float64(free)/(1<<30))
 		}

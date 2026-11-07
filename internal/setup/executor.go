@@ -14,9 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/server"
 	"github.com/aeroknight786/trialm/internal/setup/download"
+	"github.com/aeroknight786/trialm/internal/setup/enginecache"
 	"github.com/aeroknight786/trialm/internal/setup/proc"
 	"github.com/aeroknight786/trialm/internal/terminal"
 	"github.com/aeroknight786/trialm/internal/verify"
@@ -33,15 +35,18 @@ type Update struct {
 	Title    string             `json:"title"`
 	State    string             `json:"state"`
 	Progress *download.Progress `json:"progress,omitempty"`
+	Fraction float64            `json:"fraction,omitempty"`
 	Lines    []string           `json:"lines,omitempty"`
 }
 type Executor struct {
-	Root, Home string
-	Downloader Fetcher
-	Ready      ReadyFunc
-	Event      func(string, any)
-	Admin      func(context.Context, []string) error
-	mu         sync.Mutex
+	Root, Home  string
+	Downloader  Fetcher
+	Ready       ReadyFunc
+	Calibration func(context.Context, Plan, Update) error
+	eventMu     sync.Mutex
+	Event       func(string, any)
+	Admin       func(context.Context, []string) error
+	mu          sync.Mutex
 }
 type Inverse struct {
 	NativeRepo string       `json:"native_repo,omitempty"`
@@ -79,6 +84,8 @@ type NotReady struct{ Check string }
 
 func (e *NotReady) Error() string { return "setup is not Ready: " + e.Check }
 func (e *Executor) emit(kind string, data any) {
+	e.eventMu.Lock()
+	defer e.eventMu.Unlock()
 	if e.Event != nil {
 		e.Event(kind, data)
 	}
@@ -151,6 +158,11 @@ func (e *Executor) Apply(ctx context.Context, p Plan, policy Policy) (Journal, e
 	if err := e.validate(p); err != nil {
 		return Journal{}, err
 	}
+	engineUnlock, err := lock(filepath.Join(e.Root, "engine.lock"))
+	if err != nil {
+		return Journal{}, err
+	}
+	defer engineUnlock()
 	path, err := e.journalPath(p.Slug)
 	if err != nil {
 		return Journal{}, err
@@ -188,6 +200,20 @@ func (e *Executor) Apply(ctx context.Context, p Plan, policy Policy) (Journal, e
 	if err = save(path, &j); err != nil {
 		return j, err
 	}
+	if err = e.reserveCalibration(ctx, p); err != nil {
+		return j, err
+	}
+	calibrationCtx, cancelCalibration := context.WithCancel(ctx)
+	var calibrationDone chan error
+	calibrationIndex := -1
+	defer func() {
+		cancelCalibration()
+		if calibrationDone != nil {
+			<-calibrationDone
+			j.Steps[calibrationIndex].State = "paused"
+			_ = save(path, &j)
+		}
+	}()
 	var bridge *server.Server
 	defer func() {
 		if bridge != nil {
@@ -212,7 +238,9 @@ func (e *Executor) Apply(ctx context.Context, p Plan, policy Policy) (Journal, e
 		if err = save(path, &j); err != nil {
 			return j, err
 		}
-		e.emit("setup_step", u)
+		if s.Kind != Calibrate || calibrationDone == nil {
+			e.emit("setup_step", u)
+		}
 		if s.Kind == Start && s.ID == "bridge" {
 			if r.Inverse.PIDFile != "" {
 				err = proc.Stop(r.Inverse.PIDFile)
@@ -228,7 +256,39 @@ func (e *Executor) Apply(ctx context.Context, p Plan, policy Policy) (Journal, e
 					j.Addresses[p.CheckEndpoint] = fmt.Sprintf("http://127.0.0.1:%d", port)
 				}
 			}
+		} else if s.Kind == Calibrate && calibrationDone != nil {
+			err = <-calibrationDone
+			calibrationDone = nil
 		} else {
+			if s.Kind == Fetch && calibrationDone == nil {
+				for n := i + 1; n < len(p.Steps); n++ {
+					if p.Steps[n].Kind == Calibrate && j.Steps[n].State != "done" {
+						cu := Update{Index: n + 1, Total: len(p.Steps), Kind: Calibrate, Title: p.Steps[n].Title, State: "running"}
+						calibrationIndex = n
+						j.Steps[n].State = "running"
+						j.Steps[n].Inverse.Category = Calibrate
+						if err = save(path, &j); err != nil {
+							return j, err
+						}
+						e.emit("setup_step", cu)
+						calibrationDone = make(chan error, 1)
+						done := calibrationDone
+						go func() {
+							err := e.runCalibration(calibrationCtx, p, cu)
+							cu.State = "done"
+							if err != nil {
+								cu.State = "failed"
+							}
+							if calibrationCtx.Err() != nil {
+								cu.State = "paused"
+							}
+							e.emit("setup_step", cu)
+							done <- err
+						}()
+						break
+					}
+				}
+			}
 			err = e.run(ctx, s, &j, i, path, u)
 		}
 		if err != nil {
@@ -305,17 +365,18 @@ func (e *Executor) inverse(s Step, slug string) (Inverse, error) {
 	return inv, nil
 }
 func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path string, u Update) error {
-	expand := func(argv []string) []string {
-		out := append([]string(nil), argv...)
-		for k := range out {
-			out[k] = e.expand(out[k])
-		}
-		return out
-	}
 	r := &j.Steps[i]
 	logPath := filepath.Join(e.Root, "logs", j.Plan.Slug, s.ID+".log")
 	switch s.Kind {
+	case Calibrate:
+		return e.runCalibration(ctx, j.Plan, u)
 	case Fetch, Install, RunInstaller:
+		if s.Kind == Install && s.Request != nil && e.expand(s.Path) == engine.SharedDir(e.Root) {
+			if engine.SharedInstalled(e.Root, j.Plan.OS) {
+				e.emit("setup_log", Update{Lines: []string{"Reuse installed llama.cpp · no engine download"}})
+				return nil
+			}
+		}
 		if s.Request != nil {
 			request := *s.Request
 			request.Dest = e.expand(request.Dest)
@@ -363,7 +424,7 @@ func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path stri
 			}
 			r.Bytes += result.Bytes
 			if s.Kind == Install {
-				if err := unpack(ctx, request.Dest, e.expand(s.Path), s.ArchiveRoot); err != nil {
+				if err := enginecache.Unpack(ctx, request.Dest, e.expand(s.Path), s.ArchiveRoot); err != nil {
 					return err
 				}
 				return os.Remove(request.Dest)
@@ -380,7 +441,7 @@ func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path stri
 			}
 		}
 		if len(s.Argv) > 0 {
-			return e.command(ctx, expand(j.effectiveArgs(s.Argv)), expand(j.effectiveArgs(s.Env)), logPath, u)
+			return e.command(ctx, e.expandArgs(j.effectiveArgs(s.Argv)), e.expandArgs(j.effectiveArgs(s.Env)), logPath, u)
 		}
 		return nil
 	case Write:
@@ -407,14 +468,14 @@ func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path stri
 		s.Env = j.effectiveArgs(s.Env)
 		s.Health = j.effective(s.Health)
 		if len(s.Inverse) > 0 {
-			if err := e.command(ctx, expand(s.Argv), expand(s.Env), logPath, u); err != nil {
+			if err := e.command(ctx, e.expandArgs(s.Argv), e.expandArgs(s.Env), logPath, u); err != nil {
 				return err
 			}
 			return proc.WaitHealth(ctx, s.Health)
 		}
 		_, err := proc.Start(ctx, proc.Options{
-			Argv:    expand(s.Argv),
-			Env:     expand(s.Env),
+			Argv:    e.expandArgs(s.Argv),
+			Env:     e.expandArgs(s.Env),
 			PIDFile: r.Inverse.PIDFile,
 			Log:     logPath,
 			Health:  s.Health,

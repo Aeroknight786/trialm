@@ -3,6 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,6 +37,15 @@ func init() {
 	}
 }
 func Release() string { return data.Release }
+
+// SharedDir is stable across setups; old journals retain their own paths.
+func SharedDir(root string) string { return filepath.Join(root, "engines", "llama.cpp-"+Release()) }
+func SharedBinary(root, name, goos string) string {
+	if goos == "windows" {
+		name += ".exe"
+	}
+	return filepath.Join(SharedDir(root), name)
+}
 func ReleaseAsset(goos, arch, backend string) (Asset, error) {
 	a, ok := data.Assets[goos+"/"+arch+"/"+backend]
 	if !ok {
@@ -93,3 +104,14 @@ func OllamaAsset(goos, arch string) (Asset, error) {
 func OllamaRelease() string { return data.OllamaRelease }
 
 func LMSWindowsInstaller() Installer { return data.LMSWindowsInstaller }
+
+// SharedInstalled requires both benchmark and server from the completed install.
+func SharedInstalled(root, goos string) bool {
+	for _, name := range []string{"llama-server", "llama-bench"} {
+		st, err := os.Stat(SharedBinary(root, name, goos))
+		if err != nil || !st.Mode().IsRegular() || goos != "windows" && st.Mode()&0111 == 0 {
+			return false
+		}
+	}
+	return true
+}

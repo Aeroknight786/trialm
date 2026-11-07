@@ -19,11 +19,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/hw"
 )
 
 // FindEngine never installs software or downloads models.
 func FindEngine(home string) (string, error) {
+	if p := engine.SharedBinary(home, "llama-bench", runtime.GOOS); runtime.GOOS == "darwin" && executable(p) {
+		return p, nil
+	}
 	if p, e := exec.LookPath("llama-bench"); e == nil {
 		return p, nil
 	}
@@ -64,6 +68,15 @@ type Fingerprint struct {
 }
 
 func MachineFingerprint(ctx context.Context, engine string) (Fingerprint, error) {
+	if strings.HasPrefix(filepath.Base(engine), "llama-server") {
+		bench := filepath.Join(filepath.Dir(engine), "llama-bench")
+		if runtime.GOOS == "windows" {
+			bench += ".exe"
+		}
+		if executable(bench) {
+			engine = bench
+		}
+	}
 	sys, e := hw.Detect(ctx)
 	if e != nil {
 		return Fingerprint{}, e
@@ -679,4 +692,14 @@ func (c *Calibration) Rebaseline(baseline func(Probe, BenchRow) float64) {
 	}
 	c.Rows, c.NeedsRebaseline = kept, false
 	c.FitRows()
+}
+
+// Current requires a complete synthetic run for this machine and engine.
+func Current(ctx context.Context, home, engine string) bool {
+	c, err := Load(home)
+	if err != nil || !c.Complete || !c.Usable() || c.NeedsRebaseline {
+		return false
+	}
+	f, err := MachineFingerprint(ctx, engine)
+	return err == nil && f.Hash == c.Fingerprint.Hash
 }

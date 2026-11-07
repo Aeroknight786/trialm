@@ -6,10 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aeroknight786/trialm/internal/calib"
+	"github.com/aeroknight786/trialm/internal/engine"
+	"github.com/aeroknight786/trialm/internal/paths"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -33,6 +38,25 @@ func hfLocation(raw string) (string, string) {
 
 // Resolve reads file metadata only. Weight bytes are fetched after approval.
 func Resolve(ctx context.Context, in Input, token string) (Input, error) {
+	if in.OS == "darwin" {
+		root, err := paths.Home()
+		if err != nil {
+			return in, err
+		}
+		// Setup calibrates only when prefs.json opts in: the first run offers
+		// calibration before the model is picked, and Ready measures the real model.
+		prefs := struct {
+			Calibrate bool `json:"calibrate_during_setup"`
+		}{false}
+		if b, err := os.ReadFile(filepath.Join(root, "prefs.json")); err == nil {
+			if err = json.Unmarshal(b, &prefs); err != nil {
+				return in, err
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return in, err
+		}
+		in.Calibrate = prefs.Calibrate && !calib.Current(ctx, root, engine.SharedBinary(root, "llama-bench", in.OS))
+	}
 	if in.LocalModel != "" || len(in.Assets) > 0 {
 		return in, nil
 	}

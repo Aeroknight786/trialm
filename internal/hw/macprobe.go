@@ -49,6 +49,22 @@ func (d detector) detectDarwin(ctx context.Context, s *System) {
 	}
 	s.RAMBytes, _ = strconv.ParseUint(kv["hw.memsize"], 10, 64)
 	s.CPUName = kv["machdep.cpu.brand_string"]
+	// Restricted Mac sessions may deny sysctl while System Information is available.
+	if s.RAMBytes == 0 {
+		b, _ := d.r.Run(ctx, "/usr/sbin/system_profiler", "SPHardwareDataType", "-json")
+		var info struct {
+			Hardware []struct {
+				Memory string `json:"physical_memory"`
+				Chip   string `json:"chip_type"`
+			} `json:"SPHardwareDataType"`
+		}
+		if json.Unmarshal(b, &info) == nil && len(info.Hardware) > 0 {
+			s.RAMBytes = parseSizeString(info.Hardware[0].Memory)
+			if s.CPUName == "" {
+				s.CPUName = info.Hardware[0].Chip
+			}
+		}
+	}
 	s.CPUThreads = atoi(firstNonEmpty(kv["hw.logicalcpu"], kv["hw.ncpu"]))
 	s.CPUCores = atoi(kv["hw.physicalcpu"])
 	if v := strings.TrimSpace(string(swv)); v != "" && v[0] >= '0' && v[0] <= '9' {

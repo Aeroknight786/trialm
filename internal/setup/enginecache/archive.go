@@ -1,4 +1,4 @@
-package setup
+package enginecache
 
 import (
 	"archive/tar"
@@ -14,8 +14,8 @@ import (
 	"strings"
 )
 
-// unpack validates paths and links, stages a complete tree, then renames it.
-func unpack(ctx context.Context, source, dest, root string) error {
+// Unpack validates paths and links, stages a complete tree, then renames it.
+func Unpack(ctx context.Context, source, dest, root string) error {
 	if info, err := os.Stat(dest); err == nil && info.IsDir() {
 		return nil
 	}
@@ -40,7 +40,7 @@ func unpack(ctx context.Context, source, dest, root string) error {
 			name = strings.TrimPrefix(name, root+"/")
 		}
 		destPath := filepath.Join(stage, filepath.FromSlash(name))
-		if path.IsAbs(name) || !inside(stage, destPath) || strings.Contains(name, ":") {
+		if path.IsAbs(name) || !within(stage, destPath) || strings.Contains(name, ":") {
 			return errors.New("unsafe archive path")
 		}
 		if mode.IsDir() {
@@ -49,7 +49,7 @@ func unpack(ctx context.Context, source, dest, root string) error {
 		if mode&os.ModeSymlink != 0 {
 			b, err := io.ReadAll(io.LimitReader(r, 4096))
 			target := string(b)
-			if err != nil || filepath.IsAbs(target) || !inside(stage, filepath.Join(filepath.Dir(destPath), target)) {
+			if err != nil || filepath.IsAbs(target) || !within(stage, filepath.Join(filepath.Dir(destPath), target)) {
 				return errors.New("unsafe archive symlink")
 			}
 			links = append(links, struct{ name, target string }{destPath, target})

@@ -28,6 +28,7 @@ const (
 	EngineDelegate Kind = "engine-delegate"
 	Admin          Kind = "admin"
 	Check          Kind = "check"
+	Calibrate      Kind = "calibrate"
 )
 
 type Step struct {
@@ -115,6 +116,7 @@ func (p *Plan) Seal() {
 }
 
 type Input struct {
+	Calibrate                                   bool
 	DecodeErrorPct, PrefillErrorPct             int
 	Model                                       catalog.Model
 	Quant                                       catalog.Quant

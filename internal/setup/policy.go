@@ -79,7 +79,7 @@ func (e *Executor) validate(p Plan) error {
 		}
 		seen[s.ID] = true
 		switch s.Kind {
-		case Install, Fetch, RunInstaller, Write, Start, Stop, EngineDelegate, Admin, Check:
+		case Install, Fetch, RunInstaller, Write, Start, Stop, EngineDelegate, Admin, Check, Calibrate:
 		default:
 			return fmt.Errorf("unknown step kind %q", s.Kind)
 		}

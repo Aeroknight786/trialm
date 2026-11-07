@@ -8,10 +8,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aeroknight786/trialm/internal/engine"
+	"github.com/aeroknight786/trialm/internal/setup/enginecache"
 	"github.com/aeroknight786/trialm/internal/setup/proc"
 )
 
 func (e *Executor) Undo(ctx context.Context, slug string, o UndoOptions) (Journal, error) {
+	engineUnlock, err := lock(filepath.Join(e.Root, "engine.lock"))
+	if err != nil {
+		return Journal{}, err
+	}
+	defer engineUnlock()
 	path, err := e.journalPath(slug)
 	if err != nil {
 		return Journal{}, err
@@ -66,6 +73,14 @@ func (e *Executor) Undo(ctx context.Context, slug string, o UndoOptions) (Journa
 			if err = e.writable(inv.Path); err != nil {
 				return j, err
 			}
+			if strings.HasPrefix(filepath.Base(inv.Path), "llama.cpp-") && filepath.Dir(inv.Path) == filepath.Join(e.Root, "engines") {
+				if err = enginecache.Remove(e.Root, inv.Path, slug, func(line string) { e.emit("setup_log", Update{Lines: []string{line}}) }); err != nil {
+					return j, err
+				}
+				r.State = "undone"
+				continue
+			}
+
 			if inv.Existed {
 				if inv.Category == Write {
 					err = atomicWrite(inv.Path, inv.Data, inv.Mode)
@@ -104,6 +119,19 @@ func (e *Executor) Undo(ctx context.Context, slug string, o UndoOptions) (Journa
 		r.State = "undone"
 		if err = save(path, &j); err != nil {
 			return j, err
+		}
+	}
+	if o.Engines {
+		for _, step := range j.Plan.Steps {
+			if step.Kind == Start && len(step.Argv) > 0 {
+				dir := filepath.Dir(e.expand(step.Argv[0]))
+				if dir == filepath.Join(e.Root, "engines", "llama.cpp-"+engine.Release()) {
+					if err = enginecache.Remove(e.Root, dir, slug, func(line string) { e.emit("setup_log", Update{Lines: []string{line}}) }); err != nil {
+						return j, err
+					}
+
+				}
+			}
 		}
 	}
 	logDir := filepath.Join(e.Root, "logs", slug)
