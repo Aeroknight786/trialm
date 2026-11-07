@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/figure"
-	"math"
 	"strings"
 	"time"
 )
@@ -155,8 +154,8 @@ func (m *Root) agentsBody() string {
 func (m *Root) calibrationBody() string {
 	b := m.theme.selected.Bold(true).Render(fmt.Sprintf("✦ Calibrate for Accurate Estimates | ~%d mins | No Downloads", core.CalibrationMinutes()))
 	if m.calibration != nil {
-		shown := 1 - math.Pow(1-m.calibration.Fraction, 2.5)
-		b += "\n\n" + m.spin.View() + " Calibrating\n" + m.bar.ViewAs(shown) + "\n" + m.calibration.ETA + m.theme.dim.Render(fmt.Sprintf(" · %d of %d", m.calibration.Step, len(m.calibration.Estimates)))
+		// The bar is the real share of estimated time, so it agrees with "About N min left".
+		b += "\n\n" + m.spin.View() + " Calibrating\n" + m.bar.ViewAs(m.calibration.Fraction) + "\n" + m.calibration.ETA + m.theme.dim.Render(fmt.Sprintf(" · %d of %d", m.calibration.Step, len(m.calibration.Estimates)))
 	}
 	if m.detection.System != nil && m.detection.System.Power.LowPower {
 		b += "\n\n" + m.theme.caveat.Render("Low Power Mode | Expect Slower Speeds")
