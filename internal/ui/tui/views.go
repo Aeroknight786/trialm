@@ -26,7 +26,6 @@ func metric(r predict.Result, v float64, unit string, reading bool) figure.Figur
 	return core.PredictionMetric(r, v, unit, reading)
 }
 func (m *Root) body() string {
-	title := m.theme.wordmark()
 	switch m.screen() {
 	case Detect:
 		return m.detectBody()
@@ -40,7 +39,7 @@ func (m *Root) body() string {
 		if m.password == nil {
 			return "OpenRouter key"
 		}
-		return title + "\n" + m.authURL + "\n" + m.password.View()
+		return m.authURL + "\n" + m.password.View()
 	case Recipes:
 		return m.recipes()
 	case Details:
@@ -50,7 +49,7 @@ func (m *Root) body() string {
 	case Home:
 		return m.launcher()
 	case Help:
-		return "Keys\n\n↑↓ Model    ←→ Context    f File    c Cache    e Engine\n⏎ Try    s Set up    / Search    v Details\nEsc Back    q Later    ctrl-c Pause"
+		return "Keys\n\n↑↓ Model    ⏎ Choose    / Search    v Details\nGrid    ↑↓ File    ←→ Context    c Cache    e Engine\n⏎ Try    s Set up    esc Models\nEsc Back    q Later    ctrl-c Pause"
 	case Gallery:
 		b := "Published claims · unverified by triaLM · never ranked\n"
 		for i, c := range Claims() {
@@ -94,14 +93,14 @@ func (m *Root) body() string {
 	case Chat:
 		return m.chat.view()
 	}
-	return title
+	return ""
 }
 func (m *Root) recipes() string {
 	if m.cfg.Picker != nil {
 		if m.busy {
 			return "Models\n" + m.waiting() + " Loading"
 		}
-		return pick.View(&m.picker, m.selected, m.width, m.height, m.theme.plain)
+		return pick.View(&m.picker, m.selected, m.width, m.theme.plain, m.gridFocus)
 	}
 	return "Models\nNo models fit this agent on this machine."
 }

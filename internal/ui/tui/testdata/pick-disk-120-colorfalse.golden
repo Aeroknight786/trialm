@@ -1,4 +1,5 @@
-Models  Codex · Apple M5 10c · 16 GB for models · 7 of 11
+✦ triaLM  Codex · Apple M5 · 16 GB for models
+Models · 7 of 11
   ○ Qwen3-Coder 30B-A3B         up to 130K  ~47 t/s   12.9 GB │
   ○ GLM-4.7-Flash               up to 123K  ~45 t/s   12.9 GB │
   ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB │
@@ -22,4 +23,4 @@ Models  Codex · Apple M5 10c · 16 GB for models · 7 of 11
 │Memory  ██████████░░░░░░░░░░  7.98 of 16 GB                                                                         │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-↑↓ Model   ←→ Context   f File   c Cache   e Engine   ⏎ Try   s Set up   / Search   v Details   esc Back
+↑↓ Model   ⏎ Choose   / Search   v Details   q Quit

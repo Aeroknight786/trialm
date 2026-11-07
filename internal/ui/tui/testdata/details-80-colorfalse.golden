@@ -1,3 +1,4 @@
+✦ triaLM  Codex · Apple M5 · 16 GB for models
 ✓ fits
 Qwen3.6 35B-A3B · IQ3_XXS · llama.cpp (llama-server)
 Memory [===============================-----]
@@ -18,4 +19,4 @@ little benchmark data for its recurrent layers
 Argv [llama-server -m <model> --alias qwen3.6:35b-a3b --host 127.0.0.1 --port
 8080 -c 65536 -ngl 99 --jinja -fa on -ctk f16 -ctv f16 --no-mmproj -np 1]
 
-⏎ Try    s Set up    ? Sources    esc Back    q Quit
+⏎ Try   s Set up   ? Sources   esc Back   q Quit

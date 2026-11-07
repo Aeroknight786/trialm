@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/harness"
 )
 
@@ -29,20 +28,7 @@ func (m *Root) waiting() string {
 	return m.theme.selected.Render(m.spin.View())
 }
 func (m *Root) launcher() string {
-	tool := toolName(m.cfg.Preferences.Tool)
-	machine, _, _ := strings.Cut(m.detection.Target.Device.Name, " (")
-	if m.detection.Target.Synthetic {
-		machine = "what-if " + machine
-	}
-	ram := "RAM unknown"
-	if m.detection.Target.RAMBytes > 0 {
-		ram = figure.Exact(m.detection.Target.RAMBytes/(1<<30), "GB", figure.Measured, "hardware:ram").String()
-	}
-	header := m.theme.wordmark() + "    " + machine + " · " + ram + " · " + tool + " ✓"
-	if m.detecting {
-		header = m.theme.wordmark() + "    Let's get your models running"
-	}
-	b := m.card(header) + "\n"
+	b := ""
 	if m.detection.System != nil && m.detection.System.Power.LowPower {
 		b += m.theme.caveat.Render("  Low Power Mode | Expect Slower Speeds") + "\n"
 	}

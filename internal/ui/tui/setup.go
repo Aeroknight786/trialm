@@ -13,8 +13,10 @@ import (
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/engine"
 	"github.com/aeroknight786/trialm/internal/figure"
+	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/store"
+	"github.com/aeroknight786/trialm/internal/ui/tui/chrome"
 	"github.com/aeroknight786/trialm/internal/verify"
 )
 
@@ -25,6 +27,7 @@ type adminRequest struct {
 }
 
 type setupEvent struct {
+	servers []hw.ModelServer
 	event   core.Event
 	journal setup.Journal
 	err     error
@@ -72,7 +75,7 @@ func (m *Root) planSetup() tea.Cmd {
 		if executor != nil {
 			j, _ = executor.Status(p.Slug)
 		}
-		return setupEvent{journal: j, event: core.Event{Type: "setup_plan", Data: map[string]any{"plan": p}}, err: e}
+		return setupEvent{servers: m.readServers(), journal: j, event: core.Event{Type: "setup_plan", Data: map[string]any{"plan": p}}, err: e}
 	}
 }
 func (m *Root) applySetup() tea.Cmd {
@@ -122,6 +125,7 @@ func (m *Root) setupEvent(v setupEvent) tea.Cmd {
 		cmd := exec.CommandContext(request.ctx, request.argv[0], request.argv[1:]...)
 		return tea.ExecProcess(cmd, func(err error) tea.Msg { request.done <- err; return setupEvent{} })
 	case "setup_plan":
+		m.otherModels = v.servers
 		data, _ := v.event.Data.(map[string]any)
 		m.setup.plan, _ = data["plan"].(setup.Plan)
 		m.setup.journal = v.journal
@@ -193,6 +197,11 @@ func (m *Root) setupBody() string {
 	}
 	if m.expanded {
 		for i, s := range p.Steps {
+			if s.Kind == setup.Check {
+				if warning := m.modelWarning(); warning != "" {
+					b += "\n\n" + warning
+				}
+			}
 			line(s.Description(true), m.setup.states[i+1])
 		}
 		b += "\n" + strings.Join(append(append([]string{}, m.setup.logs...), p.Warnings...), "\n")
@@ -242,6 +251,9 @@ func (m *Root) setupBody() string {
 		}
 	}
 	line("Start and connect "+toolName(m.cfg.Preferences.Tool), started)
+	if warning := m.modelWarning(); warning != "" {
+		b += "\n\n" + warning
+	}
 	line("Check speed", checked)
 	if m.setup.journal.State == "paused" {
 		b += "\n" + m.setup.journal.Summary()
@@ -256,7 +268,7 @@ func timeLeft(d time.Duration) string {
 }
 func (m *Root) readyBody() string {
 	p, r := m.setup.plan, m.setup.report
-	b := m.theme.good.Bold(true).Render("✦ Ready") + "\n\n" + p.ModelName + " · " + toolName(p.Harness) + fmt.Sprintf(" · %dK context", p.ContextTokens/1024)
+	b := chrome.Brand("✦ Ready", m.theme.plain || m.theme.ascii) + "\n\n" + p.ModelName + " · " + toolName(p.Harness) + fmt.Sprintf(" · %dK context", p.ContextTokens/1024)
 	if r == nil {
 		return b
 	}

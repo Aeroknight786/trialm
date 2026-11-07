@@ -109,8 +109,13 @@ func Run(args []string) error {
 		}
 		return calibrationCheck(ctx, home, engine, *check, *jsonOut)
 	}
+	var estimates []float64
+	for _, step := range calib.Plan(*quick, *spec) {
+		estimates = append(estimates, step.EstimatedSeconds)
+	}
 	emit := func(ev calib.Event) {
 		if *jsonOut {
+			ev.StepEstimates = estimates
 			_ = json.NewEncoder(os.Stdout).Encode(ev)
 			return
 		}

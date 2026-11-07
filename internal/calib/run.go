@@ -29,17 +29,18 @@ type BenchRow struct {
 }
 
 type Event struct {
-	Version  int      `json:"v"`
-	Type     string   `json:"type"`
-	Step     int      `json:"step,omitempty"`
-	Total    int      `json:"total,omitempty"`
-	Probe    string   `json:"probe,omitempty"`
-	Message  string   `json:"message,omitempty"`
-	Elapsed  float64  `json:"elapsed_s"`
-	ETA      float64  `json:"eta_s,omitempty"`
-	Rows     int      `json:"rows,omitempty"`
-	Coverage []string `json:"coverage,omitempty"`
-	Complete bool     `json:"complete,omitempty"`
+	StepEstimates []float64 `json:"step_estimates_s,omitempty"`
+	Version       int       `json:"v"`
+	Type          string    `json:"type"`
+	Step          int       `json:"step,omitempty"`
+	Total         int       `json:"total,omitempty"`
+	Probe         string    `json:"probe,omitempty"`
+	Message       string    `json:"message,omitempty"`
+	Elapsed       float64   `json:"elapsed_s"`
+	ETA           float64   `json:"eta_s,omitempty"`
+	Rows          int       `json:"rows,omitempty"`
+	Coverage      []string  `json:"coverage,omitempty"`
+	Complete      bool      `json:"complete,omitempty"`
 }
 
 // RunOptions keeps prediction math outside calib (predict imports calib).

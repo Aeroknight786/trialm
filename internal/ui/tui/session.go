@@ -8,6 +8,7 @@ import (
 
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/harness"
+	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/store"
@@ -16,6 +17,7 @@ import (
 // SessionConfig adapts the stdlib session once for both home and find.
 func SessionConfig(ctx context.Context, s store.Store, p store.Preferences, o core.Options, top int, version string) Config {
 	cfg := Config{Context: ctx, Store: s, Preferences: p}
+	cfg.ModelServers = func(ctx context.Context) []hw.ModelServer { return hw.ModelServers(ctx, s.Dir) }
 	if o.Device == "" {
 		cfg.Power = core.LowPower
 	}

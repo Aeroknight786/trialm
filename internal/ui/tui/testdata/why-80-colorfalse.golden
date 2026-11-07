@@ -1,3 +1,4 @@
+✦ triaLM  Codex · Apple M5 · 16 GB for models
 Why these numbers?
 Qwen3.6 35B-A3B · llama.cpp (llama-server)
 ~25 tok/s
@@ -10,4 +11,4 @@ the trial uses (often a few points on coding benchmarks, more tool-call errors).
 A 4-bit file of the same model, or a smaller model at 4-bit, is the safer choice
 when quality matters more than speed
 
-esc back  q quit
+esc back   q quit

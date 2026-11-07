@@ -44,10 +44,11 @@ func TestFirstRunKeysAndLowPower(t *testing.T) {
 	}
 	m.busy = false
 	m.Update(key("enter"))
+	m.Update(key("enter"))
 	if m.screen() != First {
 		t.Fatal(m.screen())
 	}
-	t.Log("Detect advances automatically; Agents Enter + Later s + Pick Enter + browser Enter = 4 keys + 1 browser click to the trial handoff")
+	t.Log("Detect advances automatically; Agents Enter + Later s + Choose Enter + Try Enter + browser Enter = 5 keys + 1 browser click to the trial handoff")
 }
 func TestPickerCachedDrawUnder150ms(t *testing.T) {
 	m := fixture(t)
@@ -66,7 +67,7 @@ func TestPickerCachedDrawUnder150ms(t *testing.T) {
 	t.Log("cached draw", elapsed)
 }
 
-func TestFirstRunLocalFourKeys(t *testing.T) {
+func TestFirstRunLocalFiveKeys(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{Detect}
 	m.firstRun = true
@@ -103,20 +104,22 @@ func TestFirstRunLocalFourKeys(t *testing.T) {
 	m.cfg.Apply = func(context.Context, setup.Plan, core.Sink) (setup.Journal, error) {
 		return setup.Journal{Plan: p, State: "ready", Report: &verify.Report{Ready: true}}, nil
 	}
+	m.Update(key("enter"))
 	_, cmd := m.Update(key("s"))
 	m.Update(cmd())
 	_, cmd = m.Update(key("enter"))
 	m.Update(cmd())
 	_, launch := m.Update(sparkleMsg(3))
 	if m.screen() != Launching || launch == nil {
-		t.Fatal("four keys did not reach the local tool handoff", m.screen())
+		t.Fatal("five keys did not reach the local tool handoff", m.screen())
 	}
-	t.Log("Agents Enter + Later s + Set up s + approval Enter = 4 keys")
+	t.Log("Agents Enter + Later s + Choose Enter + Set up s + approval Enter = 5 keys")
 }
 func TestTryKeepsCellAcrossAgentSwitch(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{Recipes}
 	m.cfg.Preferences.PreferredTools = []string{"codex", "claude-code"}
+	m.Update(key("enter"))
 	m.Update(key("enter"))
 	before := *m.trialRow
 	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -166,7 +169,7 @@ func TestOwnAgentShowsOneAddress(t *testing.T) {
 	}
 }
 
-func TestFreshRunFirstTokenFourKeys(t *testing.T) {
+func TestFreshRunFirstTokenFiveKeys(t *testing.T) {
 	base := fixture(t)
 	s := store.Store{Dir: t.TempDir()}
 	t.Setenv("TRIALM_HOME", s.Dir)
@@ -225,6 +228,7 @@ func TestFreshRunFirstTokenFourKeys(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	program.Send(key("enter"))
+	program.Send(key("enter"))
 	waitScreen(t, program, First)
 	program.Send(key("enter"))
 	select {
@@ -237,7 +241,7 @@ func TestFreshRunFirstTokenFourKeys(t *testing.T) {
 	if e := <-done; e != nil {
 		t.Fatal(e)
 	}
-	t.Log("4 keys to first trial token; one browser authorization simulated by fake callback")
+	t.Log("5 keys to first trial token; one browser authorization simulated by fake callback")
 }
 
 func TestSelectedCellReachesRealSetupArgv(t *testing.T) {

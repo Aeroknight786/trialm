@@ -35,7 +35,7 @@ func family(name string) (string, string) {
 	f, _, _ := strings.Cut(name, " ")
 	return f, "#39c5cf"
 }
-func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
+func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 	if p == nil || len(p.Models) == 0 {
 		return "Models\nNo models fit this agent on this machine."
 	}
@@ -55,7 +55,7 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 	}
 	dim := func(s string) string { return style(s, "#8b949e") }
 	budget := strings.TrimSuffix(figure.Exact(p.Target.GPUMemBytes/(1<<30), "GB", figure.Measured, "hardware:budget").Number(), ".0") + " GB"
-	b := fmt.Sprintf("Models  %s · %s · %s for models · %d of %d\n", strings.TrimSuffix(p.Harness.Name, " CLI"), p.Target.Device.Name, budget, index+1, len(p.Models))
+	b := fmt.Sprintf("Models · %d of %d\n", index+1, len(p.Models))
 	start := min(max(0, index-3), max(0, len(p.Models)-7))
 	nameWidth := max(12, min(27, width-38))
 	for i := start; i < min(start+7, len(p.Models)); i++ {
@@ -64,6 +64,9 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 		cursor, mark := " ", "○"
 		if i == index {
 			cursor = "❯"
+			if focused {
+				cursor = "✓"
+			}
 		}
 		size := figure.Bytes(r.Quant.FileBytes, "catalog:file").String()
 		if x.OnDisk {
@@ -78,6 +81,9 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 		marker := "│"
 		if i-start == min(6, index*7/max(1, len(p.Models))) {
 			marker = "█"
+		}
+		if focused {
+			line = dim(ansi.Strip(line))
 		}
 		b += ansi.Truncate(line, max(1, width-2), "") + " " + dim(marker) + "\n"
 	}
@@ -131,12 +137,12 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 			if i == 0 {
 				w = labelWidth
 			}
-			if i == selected && plain {
+			if i == selected && (plain || !focused) {
 				l = "[" + l + "]"
 			}
 			l = ansi.Truncate(l, w, "")
 			s := lipgloss.NewStyle().Width(w)
-			if i == selected && !plain {
+			if i == selected && !plain && focused {
 				s = s.Foreground(lipgloss.Color("#0d1117")).Background(lipgloss.Color(col)).Bold(true)
 			} else if !plain && i < len(blocked) && blocked[i] {
 				s = s.Foreground(lipgloss.Color("#a05a5a"))
@@ -154,7 +160,7 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 		panel += "\n→ more"
 	}
 	panel += "\n"
-	visible := min(5, max(1, (height-19)/2))
+	visible := 5
 	offset := min(max(0, m.File-visible+1), max(0, len(g.Files)-visible))
 	for i := offset; i < min(offset+visible, len(g.Files)); i++ {
 		f := g.Files[i]
@@ -167,6 +173,9 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 		for j := colStart; j < colStart+columns; j++ {
 			c := f.Cells[j]
 			a, b := number(c.Speed)+" t/s", c.Memory.String()
+			if !c.Measured {
+				a = "~" + strings.TrimPrefix(a, "~")
+			}
 			if c.PastNative {
 				a, b = "—", "max "+Context(m.Default.Result.Model.NativeCtx)
 			} else if !c.Fits {
@@ -195,7 +204,11 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 		text = style(text, "#d29922")
 	}
 	panel += "Memory  " + style(strings.Repeat("█", full), col) + dim(strings.Repeat("░", 20-full)) + "  " + text
-	border := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(max(20, width-2)).BorderForeground(lipgloss.Color(col))
+	borderColor := "#8b949e"
+	if focused {
+		borderColor = col
+	}
+	border := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(max(20, width-2)).BorderForeground(lipgloss.Color(borderColor))
 	b += "\n" + border.Render(panel)
 	if plain {
 		b = ansi.Strip(b)
@@ -203,4 +216,5 @@ func View(p *core.ConfigPicker, index, width, height int, plain bool) string {
 	return b
 }
 
-const Keys = "↑↓ Model   ←→ Context   f File   c Cache   e Engine   ⏎ Try   s Set up   / Search   v Details   esc Back"
+const ListKeys = "↑↓ Model   ⏎ Choose   / Search   v Details   q Quit"
+const GridKeys = "↑↓ File   ←→ Context   c Cache   e Engine   ⏎ Try   s Set up   esc Models"

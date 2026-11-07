@@ -1,4 +1,5 @@
-Models  Codex · Apple M5 10c · 16 GB for models · 2 of 11
+✦ triaLM  Codex · Apple M5 · 16 GB for models
+Models · 2 of 11
   ○ Qwen3.6 35B-A3B             up to 256K  ~48 t/s   13.2 GB █
 ❯ ○ Gemma 4 26B-A4B             up to 256K  ~29 t/s   13.6 GB │
   ○ gpt-oss 20B                 up to 128K  ~40 t/s   12.1 GB │
@@ -17,12 +18,12 @@ Models  Codex · Apple M5 10c · 16 GB for models · 2 of 11
 │13.6 GB             13.8 GB      [14.1 GB]    14.8 GB      16.1 GB          │
 │Q3_K_XL             ~20 t/s      ~16 t/s      ~11 t/s      ~7.2 t/s         │
 │12.9 GB             13.2 GB      13.5 GB      14.2 GB      15.5 GB          │
-│Files 1–2 of 3 ↕                                                            │
+│IQ3_XXS             ~22 t/s      ~17 t/s      ~12 t/s      ~7.5 t/s         │
+│11.4 GB             11.8 GB      12.1 GB      12.8 GB      14.1 GB          │
 │3 larger files don't fit                                                    │
 │                                                                            │
 │Speed   ~29 t/s empty → ~16 t/s at 64K    First reply  ~26 s                │
 │Memory  ██████████████████░░  14.1 of 16 GB                                 │
 ╰────────────────────────────────────────────────────────────────────────────╯
 
-↑↓ Model   ←→ Context   f File   c Cache   e Engine   ⏎ Try   s Set up   /
-Search   v Details   esc Back
+↑↓ Model   ⏎ Choose   / Search   v Details   q Quit

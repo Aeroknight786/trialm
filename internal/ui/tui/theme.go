@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/aeroknight786/trialm/internal/ui/tui/chrome"
 	"github.com/charmbracelet/colorprofile"
 )
 
@@ -28,15 +29,7 @@ func newPalette(noColor, ascii bool) palette {
 	return palette{style("6"), style("2"), style("3"), style("1"), style("5"), style("8"), noColor, ascii}
 }
 func (p palette) wordmark() string {
-	if p.plain || p.ascii {
-		return p.glyph("▲ triaLM")
-	}
-	colors := lipgloss.Blend1D(6, lipgloss.Color("#34d9ce"), lipgloss.Color("#d881ff"))
-	word := "▲ "
-	for i, r := range "triaLM" {
-		word += lipgloss.NewStyle().Bold(true).Foreground(colors[i]).Render(string(r))
-	}
-	return word
+	return chrome.Brand("✦ triaLM", p.plain || p.ascii)
 }
 func (p palette) glyph(s string) string {
 	if !p.ascii {

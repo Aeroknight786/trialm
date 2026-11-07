@@ -70,6 +70,26 @@ func (m *ConfigModel) Cell() (ConfigCell, bool) {
 // largest fitting context in that row, otherwise the smallest fitting file.
 func (m *ConfigModel) Select(key string) {
 	old := m.Grid()
+	df, dc := 0, 0
+	switch key {
+	case "up":
+		df = -1
+	case "down":
+		df = 1
+	case "left":
+		dc = -1
+	case "right":
+		dc = 1
+	}
+	if df != 0 || dc != 0 {
+		for f, c := m.File+df, m.Column+dc; f >= 0 && f < len(old.Files) && c >= 0 && c < len(old.Contexts); f, c = f+df, c+dc {
+			if old.Files[f].Cells[c].Fits {
+				m.File, m.Column = f, c
+				return
+			}
+		}
+		return
+	}
 	name := ""
 	if m.File < len(old.Files) {
 		name = old.Files[m.File].Name
@@ -79,14 +99,6 @@ func (m *ConfigModel) Select(key string) {
 		m.Cache = (m.Cache + 1) % len(m.CacheTypes)
 	case "e":
 		m.Engine = (m.Engine + 1) % len(m.Engines)
-	case "f":
-		if len(old.Files) > 0 {
-			m.File = (m.File + 1) % len(old.Files)
-		}
-	case "left":
-		m.Column = max(0, m.Column-1)
-	case "right":
-		m.Column = min(len(old.Contexts)-1, m.Column+1)
 	}
 	g := m.Grid()
 	if key == "e" || key == "c" {

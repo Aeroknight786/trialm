@@ -33,34 +33,45 @@ func (m *Root) afterAgents() tea.Cmd {
 		return nil
 	}
 	m.replace(Calibrate)
-	return func() tea.Msg {
+	return tea.Batch(m.scanServers(), func() tea.Msg {
 		return calibrationPresenceMsg(core.CurrentCalibration(m.cfg.Context, m.cfg.Store.Dir) != nil)
-	}
+	})
 
 }
 func (m *Root) pickerKey(key string) tea.Cmd {
+	if len(m.picker.Models) == 0 {
+		if key == "/" {
+			return m.openSearch()
+		}
+		return nil
+	}
+	if m.gridFocus {
+		switch key {
+		case "up", "down", "left", "right", "c", "e":
+			m.picker.Models[m.selected].Select(key)
+		case "enter":
+			return m.try(false)
+		case "s":
+			return m.planSetup()
+		}
+		return nil
+	}
 	switch key {
 	case "up", "k":
 		m.selected = max(0, m.selected-1)
-		m.picker.Models[m.selected].Reset()
 	case "down", "j":
 		m.selected = min(len(m.picker.Models)-1, m.selected+1)
-		m.picker.Models[m.selected].Reset()
-	case "left", "right", "f", "c", "e":
-		m.picker.Models[m.selected].Select(key)
 	case "v", "d":
 		m.push(Details)
 	case "enter":
-		return m.try(false)
-	case "s":
-		return m.planSetup()
+		m.gridFocus = true
 	case "/":
 		return m.openSearch()
 	}
 	return nil
 }
 func (m *Root) detectBody() string {
-	b := m.card(m.theme.wordmark()) + "\n"
+	b := ""
 	if m.detecting {
 		for _, s := range []string{"Machine", "Coding tools", "Models on disk", "Engine"} {
 			b += "\n" + m.waiting() + " " + s
@@ -144,11 +155,14 @@ func (m *Root) agentsBody() string {
 func (m *Root) calibrationBody() string {
 	b := m.theme.selected.Bold(true).Render(fmt.Sprintf("✦ Calibrate for Accurate Estimates | ~%d mins | No Downloads", core.CalibrationMinutes()))
 	if m.calibration != nil {
-		shown := 1 - math.Pow(1-m.calibration.fraction, 2.5)
-		b += "\n\nCalibrating\n" + m.bar.ViewAs(shown) + "\n" + m.calibration.eta
+		shown := 1 - math.Pow(1-m.calibration.Fraction, 2.5)
+		b += "\n\n" + m.spin.View() + " Calibrating\n" + m.bar.ViewAs(shown) + "\n" + m.calibration.ETA + m.theme.dim.Render(fmt.Sprintf(" · %d of %d", m.calibration.Step, len(m.calibration.Estimates)))
 	}
 	if m.detection.System != nil && m.detection.System.Power.LowPower {
 		b += "\n\n" + m.theme.caveat.Render("Low Power Mode | Expect Slower Speeds")
+	}
+	if warning := m.modelWarning(); warning != "" {
+		b += "\n\n" + warning
 	}
 	return m.card(b)
 }

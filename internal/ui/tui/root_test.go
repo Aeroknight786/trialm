@@ -22,7 +22,9 @@ import (
 	"encoding/json"
 	"github.com/aeroknight786/trialm/internal/catalog"
 	"github.com/aeroknight786/trialm/internal/core"
+	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/setup"
+	"github.com/aeroknight786/trialm/internal/ui/tui/calprogress"
 	"github.com/aeroknight786/trialm/internal/verify"
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
@@ -55,6 +57,7 @@ func fixture(t testing.TB) *Root {
 	opts := core.Options{Device: "Apple M5", RAM: 24, Runtime: "all", Tuned: true, Context: p.Context, Use: "agent", QualityFloor: p.QualityFloor}
 	cfg := SessionConfig(context.Background(), s, p, opts, 3, "test")
 	cfg.UpdateNotice = nil
+	cfg.ModelServers = nil
 	cfg.Tools = []string{"codex", "claude-code"}
 	m := New(cfg)
 	d, e := cfg.Detect(context.Background())
@@ -84,7 +87,7 @@ func TestViewGoldens(t *testing.T) {
 	old := lipgloss.Writer.Profile
 	lipgloss.Writer.Profile = colorprofile.TrueColor
 	defer func() { lipgloss.Writer.Profile = old }()
-	screens := []Screen{First, Paste, Detect, Agents, Calibrate, "calibrating", "calibrate-low-power", "pick-second", "pick-last", "pick-cache", "pick-file", "pick-disk", "detecting", Help, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk"}
+	screens := []Screen{First, Paste, Detect, Agents, Calibrate, "calibrating", "calibrate-low-power", "pick-second", "pick-last", "pick-cache", "pick-file", "pick-disk", "pick-grid", "pick-moved", "pick-scrolled", "calibrate-models", "calibrate-models-details", "setup-models", "setup-models-details", "detecting", Help, Recipes, Details, Trial, Summary, Home, Gallery, ClaimCard, Search, Why, Setup, Chat, Ready, Launching, "setup-progress", "setup-paused", "error", "error-details", "setup-details", "ready-details", "setup-disk"}
 	for _, screen := range screens {
 		for _, w := range []int{60, 80, 120} {
 			for _, plain := range []bool{false, true} {
@@ -103,6 +106,7 @@ func TestViewGoldens(t *testing.T) {
 						case "pick-last":
 							m.selected = len(m.picker.Models) - 1
 						case "pick-cache", "pick-file":
+							m.gridFocus = true
 							for i, x := range m.picker.Models {
 								if x.Default.Result.Model.OllamaTag == "qwen3.5:9b" {
 									m.selected = i
@@ -110,11 +114,37 @@ func TestViewGoldens(t *testing.T) {
 							}
 							m.picker.Models[m.selected].Select("c")
 							if screen == "pick-file" {
-								m.picker.Models[m.selected].Select("f")
+								m.picker.Models[m.selected].Select("down")
 							}
 						}
 					}
 
+					if screen == "pick-grid" || screen == "pick-moved" || screen == "pick-scrolled" {
+						m.gridFocus = true
+						for i, model := range m.picker.Models {
+							if model.Default.Result.Model.OllamaTag == "qwen3.5:9b" {
+								m.selected = i
+							}
+						}
+						if screen != "pick-grid" {
+							m.picker.Models[m.selected].Select("down")
+							m.picker.Models[m.selected].Select("right")
+						}
+						if screen == "pick-scrolled" {
+							manyFileFixture(m)
+							for i := 0; i < 8; i++ {
+								m.picker.Models[m.selected].Select("down")
+							}
+						}
+					}
+					if strings.Contains(string(screen), "-models") {
+						m.otherModels = []hw.ModelServer{{Name: "llama-server", MemoryBytes: 7 << 30}, {Name: "Ollama", MemoryBytes: 6 << 30}}
+						m.expanded = strings.HasSuffix(string(screen), "-details")
+						m.stack = []Screen{Calibrate}
+						if strings.HasPrefix(string(screen), "setup-") {
+							m.stack = []Screen{Setup}
+						}
+					}
 					if screen == "pick-disk" {
 						m.stack = []Screen{Recipes}
 						for i, x := range m.picker.Models {
@@ -151,7 +181,7 @@ func TestViewGoldens(t *testing.T) {
 					}
 					if screen == "calibrating" {
 						m.stack = []Screen{Calibrate}
-						m.calibration = &calibrationJob{fraction: .25, eta: "~45 s"}
+						m.calibration = &calibrationJob{Model: calprogress.Model{Fraction: .25, ETA: "About 5 min left", Step: 3, Estimates: make([]float64, 9)}}
 						m.busy = true
 					}
 					switch screen {
@@ -202,7 +232,7 @@ func TestViewGoldens(t *testing.T) {
 						fraction = float64(m.setup.update.Progress.Done) / float64(m.setup.update.Progress.Total)
 					}
 					if screen == "calibrating" {
-						fraction = m.calibration.fraction
+						fraction = m.calibration.Fraction
 					}
 					if fraction > 0 && !plain {
 						frame := m.bar.SetPercent(fraction)()
@@ -489,7 +519,7 @@ func TestTrialHelper(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	if os.Getenv("TRIALM_CALIBRATION_HELPER") == "1" {
-		fmt.Println(`{"v":1,"type":"step","step":2,"total":4,"message":"bench fixture","eta_s":45}`)
+		fmt.Println(`{"v":1,"type":"step","step":2,"total":4,"message":"bench fixture","eta_s":45,"step_estimates_s":[15,15,15,15]}`)
 		fmt.Println(`{"v":1,"type":"result","complete":true,"message":"done"}`)
 		os.Exit(0)
 	}
@@ -523,7 +553,7 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 			}
 			break
 		}
-		if v.event.Step == 2 && (!strings.Contains(m.View().Content, "left") || job.fraction != .25) {
+		if v.event.Step == 2 && (!strings.Contains(m.View().Content, "left") || job.Fraction != .25) {
 			t.Fatal(job, m.View().Content)
 		}
 	}
@@ -538,7 +568,7 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 func TestFooterBindings(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{Recipes}
-	for _, want := range []string{"↑↓ Model", "←→ Context", "f File", "c Cache", "e Engine", "⏎ Try", "s Set up", "/ Search", "v Details"} {
+	for _, want := range []string{"↑↓ Model", "⏎ Choose", "/ Search", "v Details", "q Quit"} {
 		if !strings.Contains(m.footer(), want) {
 			t.Fatal(m.footer())
 		}
@@ -761,7 +791,9 @@ func TestLauncherKeysAndLazyCloudKey(t *testing.T) {
 	if m.screen() != Home {
 		t.Fatal(m.screen())
 	}
-	m.Update(key("f"))
+	m.modelIndex = len(m.models)
+	m.detecting = false
+	m.Update(key("enter"))
 	if m.screen() != Recipes {
 		t.Fatal(m.screen())
 	}
@@ -791,8 +823,8 @@ func TestErrorDetailsAndReducedMotion(t *testing.T) {
 	m.cfg.Detect = nil
 	m.cfg.Models = nil
 	m.cfg.UpdateNotice = nil
-	if m.tick() != nil {
-		t.Fatal("NO_COLOR spinner animates")
+	if m.tick() == nil {
+		t.Fatal("calibration spinner needs ticks with NO_COLOR")
 	}
 	m.autoLaunch = false
 	m.stack = []Screen{Ready}
@@ -856,7 +888,7 @@ func TestNoColorRetainsUnicodeBoxes(t *testing.T) {
 	t.Setenv("TERM", "xterm-256color")
 	m := New(Config{NoColor: os.Getenv("NO_COLOR") != "", ASCII: asciiTerminal("linux", os.Getenv)})
 	card := m.card("triaLM")
-	if strings.Contains(card, "\x1b") || !strings.Contains(card, "╭") || !strings.Contains(card, "│") || m.theme.glyph("✓") != "✓" || m.theme.wordmark() != "▲ triaLM" {
+	if strings.Contains(card, "\x1b") || !strings.Contains(card, "╭") || !strings.Contains(card, "│") || m.theme.glyph("✓") != "✓" || m.theme.wordmark() != "✦ triaLM" {
 		t.Fatal(card)
 	}
 	for _, goos := range []string{"linux", "windows"} {

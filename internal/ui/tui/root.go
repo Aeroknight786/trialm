@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"github.com/aeroknight786/trialm/internal/core"
+	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/store"
@@ -50,6 +50,7 @@ const (
 
 // Config uses application callbacks so no Charm types escape into the CLI/core.
 type Config struct {
+	ModelServers    func(context.Context) []hw.ModelServer
 	Power           func(context.Context) bool
 	Picker          func(context.Context, core.Detection, store.Preferences) (core.ConfigPicker, error)
 	LocalPlan       *setup.Plan
@@ -75,7 +76,11 @@ type Config struct {
 	Headless        bool
 	Tools           []string
 }
-type powerMsg bool
+type powerMsg struct {
+	low     bool
+	servers []hw.ModelServer
+}
+type serversMsg []hw.ModelServer
 type calibrationPresenceMsg bool
 type detectDoneMsg struct{}
 type pickerMsg struct {
@@ -111,6 +116,8 @@ type windowDoneMsg struct{ err error }
 
 // Root owns every screen and sub-model for the entire interactive session.
 type Root struct {
+	otherModels                               []hw.ModelServer
+	gridFocus                                 bool
 	picker                                    core.ConfigPicker
 	agents                                    []core.AgentChoice
 	agentIndex                                int
@@ -205,7 +212,7 @@ func (m *Root) back() {
 	m.message, m.rawError = "", ""
 }
 func (m *Root) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.tick()}
+	cmds := []tea.Cmd{m.tick(), m.scanServers()}
 	if m.cfg.WindowArgs != nil {
 		return tea.Batch(m.tick(), m.beginWindow(m.cfg.WindowArgs))
 	}
@@ -259,9 +266,6 @@ func (m *Root) loadModels() tea.Cmd {
 	}
 }
 func (m *Root) tick() tea.Cmd {
-	if m.theme.plain || m.theme.ascii {
-		return nil
-	}
 	return m.spin.Tick
 }
 func (m *Root) fail(sentence string, err error) {
@@ -389,10 +393,13 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.setupEvent(v)
 	case powerMsg:
 		m.busy = false
+		m.otherModels = v.servers
 		if m.detection.System != nil {
-			m.detection.System.Power.LowPower = bool(v)
+			m.detection.System.Power.LowPower = v.low
 		}
-		return m, m.beginCalibration(bool(v))
+		return m, m.beginCalibration(v.low)
+	case serversMsg:
+		m.otherModels = v
 	case calibrationPresenceMsg:
 		if bool(v) && m.screen() == Calibrate && !m.busy {
 			m.replace(Recipes)
@@ -410,6 +417,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.picker = v.picker
 		m.selected = 0
+		m.gridFocus = false
 		if m.firstRun {
 			for i, x := range m.picker.Models {
 				if x.OnDisk && m.picker.Models[i].SelectOnDisk() {
@@ -437,7 +445,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Tick(1500*time.Millisecond, func(time.Time) tea.Msg { return detectDoneMsg{} })
 		}
 		if v.err != nil {
-			m.fail("Could not load your models. Press f to find a recipe or d for details.", v.err)
+			m.fail("Could not load your models. Press / to find a recipe or d for details.", v.err)
 		} else {
 			m.models = v.rows
 			m.modelIndex = min(m.modelIndex, len(m.models))
@@ -454,7 +462,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if v.err != nil {
 			m.detecting = false
-			m.fail("Could not read this machine. Press f to find a recipe or d for details.", v.err)
+			m.fail("Could not read this machine. Press / to find a recipe or d for details.", v.err)
 			return m, nil
 		}
 		if m.cfg.Start == "" || m.cfg.Start == Home {
@@ -555,9 +563,12 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.loadModels()
 		}
 		m.message = ""
-		m.calibration.record(v.event)
-		return m, tea.Batch(m.calibration.next(), m.bar.SetPercent(1-math.Pow(1-m.calibration.fraction, 2.5)))
+		m.calibration.Record(v.event, time.Now())
+		return m, m.calibration.next()
 	case pulseMsg:
+		if m.calibration != nil {
+			m.calibration.Tick(time.Time(v))
+		}
 		if m.screen() == Trial {
 			m.meter = window.ReadMeter(m.cfg.Store)
 		}
@@ -637,7 +648,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Error = context.Canceled
 			return m, tea.Interrupt
 		}
-		if (key == "d" || key == "v") && (m.screen() == Detect || m.screen() == Home || m.screen() == Setup || m.screen() == Ready || m.rawError != "") {
+		if (key == "d" || key == "v") && (m.screen() == Detect || m.screen() == Home || m.screen() == Calibrate || m.screen() == Setup || m.screen() == Ready || m.rawError != "") {
 			m.expanded = !m.expanded
 			return m, nil
 		}
@@ -703,6 +714,10 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		if key == "esc" {
+			if m.screen() == Recipes && m.gridFocus {
+				m.gridFocus = false
+				return m, nil
+			}
 			if !m.busy {
 				m.back()
 			}
@@ -734,9 +749,15 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.find()
 			}
 			if key == "enter" {
-				if m.cfg.Power != nil {
+				if m.cfg.Power != nil || m.cfg.ModelServers != nil {
 					m.busy = true
-					return m, func() tea.Msg { return powerMsg(m.cfg.Power(m.cfg.Context)) }
+					low := m.detection.System != nil && m.detection.System.Power.LowPower
+					return m, func() tea.Msg {
+						if m.cfg.Power != nil {
+							low = m.cfg.Power(m.cfg.Context)
+						}
+						return powerMsg{low: low, servers: m.readServers()}
+					}
 				}
 				return m, m.beginCalibration(m.detection.System != nil && m.detection.System.Power.LowPower)
 			}
@@ -802,49 +823,34 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "t":
 				return m, m.try(false)
-			case "f":
-				m.push(Recipes)
-				return m, m.find()
 			case "/":
 				return m, m.openSearch()
 			case "c":
 				m.push(Gallery)
 			}
-		case Recipes, Details:
-			if m.screen() == Recipes && len(m.picker.Models) > 0 {
-				return m, m.pickerKey(key)
-			}
+		case Recipes:
+			return m, m.pickerKey(key)
+		case Details:
 			switch key {
-			case "down", "j":
-				m.selected = min(m.selected+1, len(m.listing.Rows)-1)
-			case "up", "k":
-				m.selected = max(0, m.selected-1)
 			case "enter":
 				return m, m.try(false)
 			case "w":
 				return m, m.try(true)
-			case "d":
-				if m.screen() == Recipes {
-					m.push(Details)
-				}
 			case "s":
 				return m, m.planSetup()
-
 			case "/":
 				return m, m.openSearch()
 			case "?":
 				m.push(Why)
-			case " ", "space":
-				if m.screen() == Details {
-					if m.cfg.Preferences.Boosts == "off" {
-						m.cfg.Preferences.Boosts = "auto"
-					} else {
-						m.cfg.Preferences.Boosts = "off"
-					}
-					return m, m.find()
-				}
 			case "c":
 				m.push(Gallery)
+			case " ", "space":
+				if m.cfg.Preferences.Boosts == "off" {
+					m.cfg.Preferences.Boosts = "auto"
+				} else {
+					m.cfg.Preferences.Boosts = "off"
+				}
+				return m, m.find()
 			}
 		case Summary:
 			switch key {
@@ -928,12 +934,15 @@ func (m *Root) footer() string {
 		return "⏎ Continue    space Toggle    ↑↓ Move"
 	case Calibrate:
 		if m.busy {
-			return "ctrl-c Pause"
+			return "ctrl-c Pause   v Details"
 		}
-		return "⏎ Now   s Later (run trialm calibrate)"
+		return "⏎ Now   s Later (run trialm calibrate)   v Details"
 	case Recipes:
 		if m.cfg.Picker != nil {
-			return pick.Keys
+			if m.gridFocus {
+				return pick.GridKeys
+			}
+			return pick.ListKeys
 		}
 	}
 	if m.screen() == Setup {
@@ -959,7 +968,7 @@ func (m *Root) footer() string {
 		}
 		hint := "⏎ Try in " + tool
 		if m.cfg.Store.Key() == "" {
-			hint += " (OpenRouter sign-in)    p Paste key"
+			hint += "    p Paste key"
 		}
 		return hint + "    tab Agent    esc Back"
 	case Paste:
@@ -990,7 +999,7 @@ func (m *Root) footer() string {
 	}
 }
 func (m *Root) View() tea.View {
-	body := m.body()
+	body := m.brandLine() + "\n" + m.body()
 	if (m.busy || (m.screen() == Chat && m.chat.busy)) && m.calibration == nil && m.screen() != Home && m.screen() != Trial && m.screen() != Setup {
 		body += "\n" + m.waiting() + " Working…"
 	}
@@ -1000,7 +1009,7 @@ func (m *Root) View() tea.View {
 	if m.expanded && m.rawError != "" {
 		body += "\n" + wrap(m.rawError, m.width-4)
 	}
-	body += "\n\n" + wrap(m.helpView(), m.width)
+	body += "\n\n" + m.helpView()
 	if m.theme.plain {
 		body = strip(body)
 	}

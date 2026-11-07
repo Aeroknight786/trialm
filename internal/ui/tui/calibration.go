@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +13,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/calib"
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/store"
+	"github.com/aeroknight786/trialm/internal/ui/tui/calprogress"
 )
 
 type calibrationEventMsg struct {
@@ -24,15 +23,14 @@ type calibrationEventMsg struct {
 	event   calib.Event
 }
 type calibrationJob struct {
-	events   chan calibrationEventMsg
-	cancel   context.CancelFunc
-	fraction float64
-	eta      string
+	events chan calibrationEventMsg
+	cancel context.CancelFunc
+	calprogress.Model
 }
 
 func newCalibration(parent context.Context, exe string) *calibrationJob {
 	ctx, cancel := context.WithCancel(parent)
-	job := &calibrationJob{events: make(chan calibrationEventMsg, 32), cancel: cancel, eta: "Estimating time left"}
+	job := &calibrationJob{events: make(chan calibrationEventMsg, 32), cancel: cancel, Model: calprogress.New(calib.Plan(false, os.Getenv("TRIALM_CALIBRATE_SPEC") != "0"), time.Now())}
 	go func() {
 		defer close(job.events)
 		defer cancel()
@@ -100,17 +98,5 @@ func (j *calibrationJob) next() tea.Cmd {
 			return calibrationEventMsg{done: true}
 		}
 		return v
-	}
-}
-func (j *calibrationJob) record(ev calib.Event) {
-	if ev.Total > 0 {
-		j.fraction = float64(max(0, ev.Step-1)) / float64(ev.Total)
-	}
-	if ev.ETA <= 0 {
-		j.eta = "Estimating time left"
-	} else if ev.ETA <= 60 {
-		j.eta = "Under a minute left"
-	} else {
-		j.eta = fmt.Sprintf("About %.0f min left", math.Ceil(ev.ETA/60))
 	}
 }

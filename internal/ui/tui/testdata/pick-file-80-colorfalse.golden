@@ -1,8 +1,9 @@
-Models  Codex · Apple M5 10c · 16 GB for models · 7 of 11
+✦ triaLM  Codex · Apple M5 · 16 GB for models
+Models · 7 of 11
   ○ Qwen3-Coder 30B-A3B         up to 130K  ~47 t/s   12.9 GB │
   ○ GLM-4.7-Flash               up to 123K  ~45 t/s   12.9 GB │
   ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB │
-❯ ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB █
+✓ ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB █
   ○ Granite 4.2 8B              up to 128K  ~22 t/s   5.35 GB │
   ○ Llama 3.1 8B Instruct       up to 128K  ~15 t/s   8.54 GB │
   ○ Qwen3.5 4B                  up to 256K  ~38 t/s   2.74 GB │
@@ -13,14 +14,13 @@ Models  Codex · Apple M5 10c · 16 GB for models · 7 of 11
 │Engine    [llama.cpp]                                                       │
 │                                                                            │
 │t/s when full       32K          64K          128K         256K             │
-│Q8_0                ~11 t/s      [~9.0 t/s]   ~6.6 t/s     ~4.3 t/s         │
-│9.53 GB             10.1 GB      [10.6 GB]    11.7 GB      13.8 GB          │
-│Q4_K_M              ~15 t/s      ~12 t/s      ~8.0 t/s     ~4.9 t/s         │
-│5.68 GB             6.52 GB      7.05 GB      8.11 GB      10.2 GB          │
+│Q8_0                ~11 t/s      ~9.0 t/s     ~6.6 t/s     ~4.3 t/s         │
+│9.53 GB             10.1 GB      10.6 GB      11.7 GB      13.8 GB          │
+│Q4_K_M              ~15 t/s      [~12 t/s]    ~8.0 t/s     ~4.9 t/s         │
+│5.68 GB             6.52 GB      [7.05 GB]    8.11 GB      10.2 GB          │
 │                                                                            │
-│Speed   ~14 t/s empty → ~9.0 t/s at 64K    First reply  ~40 s               │
-│Memory  █████████████░░░░░░░  10.6 of 16 GB                                 │
+│Speed   ~22 t/s empty → ~12 t/s at 64K    First reply  ~32 s                │
+│Memory  █████████░░░░░░░░░░░  7.05 of 16 GB                                 │
 ╰────────────────────────────────────────────────────────────────────────────╯
 
-↑↓ Model   ←→ Context   f File   c Cache   e Engine   ⏎ Try   s Set up   /
-Search   v Details   esc Back
+↑↓ File   ←→ Context   c Cache   e Engine   ⏎ Try   s Set up   esc Models
