@@ -124,9 +124,7 @@
         "decode_error_range_pct": 55,
         "prefill_error_range_pct": 65,
         "no_speed_claim": false,
-        "warnings": [
-          "MLX is not calibrated by llama-bench; these timings remain simulated"
-        ],
+        "warnings": null,
         "assumptions": [
           "overflow=error (unverified for this version)",
           "swa_rollback=free (unverified for this version)"
@@ -169,8 +167,7 @@
         "prefill_error_range_pct": 80,
         "no_speed_claim": false,
         "warnings": [
-          "trial stand-in: no cloud provider hosts this exact model, so trials use Qwen3.5 9B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's",
-          "MLX is not calibrated by llama-bench; these timings remain simulated"
+          "trial stand-in: no cloud provider hosts this exact model, so trials use Qwen3.5 9B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
         ],
         "assumptions": [
           "overflow=error (unverified for this version)",

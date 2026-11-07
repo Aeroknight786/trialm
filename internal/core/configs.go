@@ -266,13 +266,20 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 			local[q.Name] = cachedModel(userHome, home, row.Result.Model, q)
 			cm.OnDisk = cm.OnDisk || local[q.Name] != ""
 		}
+		engines := cm.Engines[:0]
 		for _, rt := range cm.Engines {
+			files := 0
 			for _, cache := range cm.CacheTypes {
 				g := BuildConfigGrid(row.Result.Model, rt, cache, d.Target, h.Scenario, local, c)
 				cm.Grids[gridKey(rt.ID, cache)] = g
 				cm.MaxContext = max(cm.MaxContext, g.MaxContext)
+				files += len(g.Files)
+			}
+			if files > 0 { // an engine none of whose files fit is not offered
+				engines = append(engines, rt)
 			}
 		}
+		cm.Engines = engines
 		if cm.MaxContext == 0 {
 			continue
 		}

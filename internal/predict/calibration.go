@@ -124,9 +124,6 @@ func calibrationQuant(q string) string {
 // models and --device targets keep the original timings and bands.
 func applyCalibration(r *Result, in Input) {
 	r.Kind = "simulated"
-	if in.Runtime.Engine == "mlx" {
-		r.Warnings = append(r.Warnings, "MLX is not calibrated by llama-bench; these timings remain simulated")
-	}
 	if !calibrationAllowed(r, in) {
 		return
 	}
@@ -134,12 +131,15 @@ func applyCalibration(r *Result, in Input) {
 }
 
 func calibrationAllowed(r *Result, in Input) bool {
-	return !in.Target.Synthetic && in.Runtime.Engine == "llamacpp" && r.Timing != nil && r.Memory.Level != FitOffload && r.Memory.Level != FitNo
+	return !in.Target.Synthetic && (in.Runtime.Engine == "llamacpp" || in.Runtime.Engine == "mlx") && r.Timing != nil && r.Memory.Level != FitOffload && r.Memory.Level != FitNo
 }
 func applyMachineCalibration(r *Result, in Input, c *calib.Calibration) {
-	if !calibrationAllowed(r, in) || c == nil || c.Backend != "" && c.Backend != r.Backend {
+	// MLX shares the Metal calibration: its own measured difference is its
+	// profile's decode_mult, applied on top.
+	if !calibrationAllowed(r, in) || c == nil || c.Backend != "" && c.Backend != r.Backend && !(c.Backend == "metal" && r.Backend == "mlx") {
 		return
 	}
+	priorD, priorP := r.Accuracy.DecodePct, r.Accuracy.PrefillPct
 	class, q := calibrationClass(in.Model), calibrationQuant(r.Quant.Name)
 	sc := in.Scenario
 	if sc.BasePromptTokens == 0 {
@@ -219,6 +219,19 @@ func applyMachineCalibration(r *Result, in Input, c *calib.Calibration) {
 	if !usedReal && (in.Target.CPUOnly || hasReal && len(c.Fits) == 0) {
 		return
 	}
+	// Evidence less certain than the plain estimate does not move it: a
+	// composite of other models' probes can be far off for this one.
+	if !usedReal {
+		if db > priorD && pb > priorP {
+			return
+		}
+		if db > priorD {
+			factors.decode, db = [3]float64{1, 1, 1}, priorD
+		}
+		if pb > priorP {
+			factors.prefill, pb = [3]float64{1, 1, 1}, priorP
+		}
+	}
 	r.Timing.calibration = factors
 	r.Kind = "calibrated"
 	r.Accuracy.DecodePct = db
@@ -242,7 +255,9 @@ func applyMachineCalibration(r *Result, in Input, c *calib.Calibration) {
 			}
 		}
 	}
-	if in.Runtime.ID != "llamacpp" {
+	if in.Runtime.Engine == "mlx" {
+		r.Warnings = append(r.Warnings, "calibrated using llama-bench on this machine, with MLX's measured speed difference on top")
+	} else if in.Runtime.ID != "llamacpp" {
 		r.Warnings = append(r.Warnings, "calibrated using llama-bench; assumes this runtime's llama.cpp engine uses matching kernels and settings")
 	}
 }

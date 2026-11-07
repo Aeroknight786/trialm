@@ -35,13 +35,9 @@ Tip: device spec partly assumed: a calibration probe would tighten this.
   ⚠ LM Studio (MLX engine) (defaults): Claude Code's ~20k-token prompt does not fit the 4096-token context (LM Studio (MLX engine) default load setting): the middle of the conversation is silently cut
   ⚠ LM Studio (MLX engine) (defaults): does not fit: needs 19.7 GB, 16.0 GB available
   ⚠ quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes
-  ⚠ LM Studio (MLX engine) (defaults): MLX is not calibrated by llama-bench; these timings remain simulated
   ⚠ LM Studio (MLX engine) (tuned): does not fit: needs 20.7 GB, 16.0 GB available
-  ⚠ LM Studio (MLX engine) (tuned): MLX is not calibrated by llama-bench; these timings remain simulated
   ⚠ mlx-lm server (defaults): does not fit: needs 24.6 GB, 16.0 GB available
-  ⚠ mlx-lm server (defaults): MLX is not calibrated by llama-bench; these timings remain simulated
   ⚠ mlx-lm server (tuned): does not fit: needs 20.7 GB, 16.0 GB available
-  ⚠ mlx-lm server (tuned): MLX is not calibrated by llama-bench; these timings remain simulated
 
 Recommendation: no runtime gives a working Claude Code setup for this model here — try a smaller quant (--quant), a smaller model, or --ctx.
 

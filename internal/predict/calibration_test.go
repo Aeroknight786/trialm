@@ -50,16 +50,26 @@ func TestCalibrationRecomputesEveryHeadline(t *testing.T) {
 		t.Fatalf("hook left inconsistent figures: %+v", r)
 	}
 }
+
+// MLX shares the Metal calibration, so it moves by the same factor as llama.cpp.
+func TestCalibrationAppliesToMLX(t *testing.T) {
+	in, r, c := calibrationFixture(t)
+	in.Runtime.Engine, r.Backend = "mlx", "mlx"
+	dec := r.DecodeTPS0
+	applyMachineCalibration(&r, in, c)
+	if r.Kind != "calibrated" || math.Abs(r.DecodeTPS0/dec-2) > 1e-8 {
+		t.Fatal(r.Kind, r.DecodeTPS0/dec)
+	}
+}
+
 func TestCalibrationRejectsWhatIfMLXOffloadAndBackend(t *testing.T) {
-	for _, which := range []string{"what-if", "mlx", "offload", "no-fit", "backend", "cpu"} {
+	for _, which := range []string{"what-if", "offload", "no-fit", "backend", "cpu"} {
 		t.Run(which, func(t *testing.T) {
 			in, r, c := calibrationFixture(t)
 			before := r.DecodeTPS0
 			switch which {
 			case "what-if":
 				in.Target.Synthetic = true
-			case "mlx":
-				in.Runtime.Engine = "mlx"
 			case "offload":
 				r.Memory.Level = FitOffload
 			case "no-fit":
@@ -138,15 +148,25 @@ func TestPartialCalibrationKeepsOriginalPrediction(t *testing.T) {
 }
 
 func TestCalibrationReportsWidestDepthBand(t *testing.T) {
-	in, r, c := calibrationFixture(t)
+	in, plain, c := calibrationFixture(t)
 	for i := range c.Fits {
 		if c.Fits[i].Depth == 32768 {
-			c.Fits[i].BandPct = 85
+			c.Fits[i].BandPct = 40 // within the plain ±45%/±55%
 		}
 	}
+	r := plain
 	applyMachineCalibration(&r, in, c)
-	if r.Accuracy.DecodePct != 85 || r.Accuracy.PrefillPct != 85 || !strings.Contains(r.Accuracy.Basis, "direct dense/Q4_K_M depth 32768") {
+	if r.Accuracy.DecodePct != 40 || r.Accuracy.PrefillPct != 40 || !strings.Contains(r.Accuracy.Basis, "direct dense/Q4_K_M depth 32768") {
 		t.Fatal(r.Accuracy)
+	}
+	// Evidence less certain than the plain estimate leaves it alone.
+	for i := range c.Fits {
+		c.Fits[i].BandPct = 85
+	}
+	r = plain
+	applyMachineCalibration(&r, in, c)
+	if r.Kind == "calibrated" || r.DecodeTPS0 != plain.DecodeTPS0 || r.Accuracy != plain.Accuracy {
+		t.Fatal(r.Kind, r.Accuracy)
 	}
 }
 
@@ -174,8 +194,10 @@ func TestM5RealQwen35Validation(t *testing.T) {
 	}
 	rt, _ := runtime.Get("llamacpp")
 	r := WithCalibration(Input{Model: m, QuantName: "Q4_K_M", Runtime: rt, Target: target, Tuned: true, CtxOverride: 65536, KVCacheType: "f16"}, &c)
-	if r.Kind != "calibrated" || !strings.Contains(r.Accuracy.Basis, "alone") || !strings.Contains(r.Accuracy.Basis, "rejected") {
-		t.Fatalf("missing fallback: %s %s", r.Kind, r.Accuracy.Basis)
+	// Probes of other shapes give this hybrid model a band wider than the
+	// plain estimate's, so the plain estimate stands (it was 2x too fast).
+	if r.Kind != "simulated" {
+		t.Fatalf("loose composite applied: %s %s", r.Kind, r.Accuracy.Basis)
 	}
 	b, err = os.ReadFile("../calib/testdata/real-qwen3.5-9b-Q4_K_M.json")
 	if err != nil {

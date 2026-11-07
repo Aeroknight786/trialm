@@ -170,9 +170,7 @@
         "decode_error_range_pct": 55,
         "prefill_error_range_pct": 65,
         "no_speed_claim": false,
-        "warnings": [
-          "MLX is not calibrated by llama-bench; these timings remain simulated"
-        ],
+        "warnings": null,
         "assumptions": [
           "overflow=error (unverified for this version)",
           "swa_rollback=free (unverified for this version)"
