@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/paths"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/calib"
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/setup/calibration"
+	"github.com/aeroknight786/trialm/internal/terminal"
 	"runtime"
 )
 
@@ -113,11 +115,30 @@ func Run(args []string) error {
 	for _, step := range calib.Plan(*quick, *spec) {
 		estimates = append(estimates, step.EstimatedSeconds)
 	}
+	total := 0.
+	for _, e := range estimates {
+		total += e
+	}
+	// On a terminal: one line that fills in, like triaLM's calibration card.
+	pretty := terminal.IsTTY(os.Stderr)
 	emit := func(ev calib.Event) {
 		if *jsonOut {
 			ev.StepEstimates = estimates
 			_ = json.NewEncoder(os.Stdout).Encode(ev)
 			return
+		}
+		if pretty && ev.Type != "result" && ev.Type != "interrupted" {
+			if ev.Type == "start" {
+				fmt.Fprintf(os.Stderr, "✦ Calibrating this Mac · %s · no model downloads · ctrl-c keeps finished steps\n\n", calib.Remaining(total))
+			}
+			if ev.Type == "step" && total > 0 {
+				done := int(math.Round(24 * max(0, min(1, 1-ev.ETA/total))))
+				fmt.Fprintf(os.Stderr, "\r\x1b[2K  %s%s  %d of %d · %s left", strings.Repeat("█", done), strings.Repeat("░", 24-done), ev.Step, ev.Total, calib.Remaining(ev.ETA))
+			}
+			return
+		}
+		if pretty {
+			fmt.Fprintln(os.Stderr)
 		}
 		switch ev.Type {
 		case "start":
@@ -125,8 +146,16 @@ func Run(args []string) error {
 		case "step":
 			fmt.Fprintf(os.Stderr, "[%d/%d] %s · %s · ETA %s\n", ev.Step, ev.Total, ev.Probe, ev.Message, calib.Remaining(ev.ETA))
 		case "result":
+			if pretty {
+				fmt.Fprintln(os.Stderr, "\n✓ Calibrated · estimates now fit this Mac")
+				return
+			}
 			fmt.Fprintf(os.Stderr, "%s. Coverage: %s. MLX is not calibrated.\n", ev.Message, strings.Join(ev.Coverage, ", "))
 		case "interrupted":
+			if pretty {
+				fmt.Fprintln(os.Stderr, "\nPaused · finished steps are kept · trialm calibrate resumes")
+				return
+			}
 			fmt.Fprintln(os.Stderr, "Stopped. Finished rows are in", filepath.Join(home, "calib.json"))
 		}
 	}
