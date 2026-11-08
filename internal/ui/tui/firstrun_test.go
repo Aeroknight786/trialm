@@ -39,16 +39,17 @@ func TestFirstRunKeysAndLowPower(t *testing.T) {
 	}
 	m.detection.System.Power.LowPower = false
 	m.Update(key("s"))
-	if m.screen() != Recipes {
+	if m.screen() != Home {
 		t.Fatal(m.screen())
 	}
-	m.busy = false
-	m.Update(key("enter"))
+	// A new user's pick is not on this Mac yet: Enter tries it.
+	m.busy, m.detecting, m.modelIndex = false, false, 2
+	m.models[2].Journal, m.models[2].Row.LocalPath = nil, ""
 	m.Update(key("enter"))
 	if m.screen() != First {
 		t.Fatal(m.screen())
 	}
-	t.Log("Detect advances automatically; Agents Enter + Later s + Choose Enter + Try Enter + browser Enter = 5 keys + 1 browser click to the trial handoff")
+	t.Log("Detect advances automatically; Agents Enter + Later s + Try Enter + sign-in Enter = 4 keys + 1 browser click to the trial handoff")
 }
 func TestPickerCachedDrawUnder150ms(t *testing.T) {
 	m := fixture(t)
@@ -173,7 +174,7 @@ func TestOwnAgentShowsOneAddress(t *testing.T) {
 	}
 }
 
-func TestFreshRunFirstTokenFiveKeys(t *testing.T) {
+func TestFreshRunFirstTokenFourKeys(t *testing.T) {
 	base := fixture(t)
 	s := store.Store{Dir: t.TempDir()}
 	t.Setenv("TRIALM_HOME", s.Dir)
@@ -218,20 +219,19 @@ func TestFreshRunFirstTokenFiveKeys(t *testing.T) {
 	program.Send(key("enter"))
 	waitScreen(t, program, Calibrate)
 	program.Send(key("s"))
-	waitScreen(t, program, Recipes)
+	waitScreen(t, program, Home)
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		ch := make(chan bool, 1)
-		program.Send(probeRows{ch})
+		program.Send(probeLauncher{ch})
 		if <-ch {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("picker never ready")
+			t.Fatal("picks never ready")
 		}
 		time.Sleep(time.Millisecond)
 	}
-	program.Send(key("enter"))
 	program.Send(key("enter"))
 	waitScreen(t, program, First)
 	program.Send(key("enter"))
@@ -245,7 +245,7 @@ func TestFreshRunFirstTokenFiveKeys(t *testing.T) {
 	if e := <-done; e != nil {
 		t.Fatal(e)
 	}
-	t.Log("5 keys to first trial token; one browser authorization simulated by fake callback")
+	t.Log("4 keys to first trial token; one browser authorization simulated by fake callback")
 }
 
 func TestSelectedCellReachesRealSetupArgv(t *testing.T) {

@@ -419,8 +419,8 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.otherModels = v
 	case calibrationPresenceMsg:
 		if bool(v) && m.screen() == Calibrate && !m.busy {
-			m.replace(Recipes)
-			return m, m.find()
+			m.replace(Home)
+			return m, m.loadModels()
 		}
 	case detectDoneMsg:
 		if m.screen() == Detect && !m.detecting {
@@ -582,7 +582,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.busy = false
 			m.calibration = nil
 			if m.screen() == Calibrate {
-				m.replace(Recipes)
+				m.replace(Home)
 			}
 			if v.err != nil {
 				m.fail("Calibration stopped · v Details", v.err)
@@ -797,8 +797,8 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Calibrate:
 			if key == "s" {
 				m.choice("skipped")
-				m.replace(Recipes)
-				return m, m.find()
+				m.replace(Home)
+				return m, m.loadModels()
 			}
 			if key == "enter" {
 				if m.cfg.Power != nil || m.cfg.ModelServers != nil {

@@ -63,7 +63,9 @@ func (m *Root) launcher() string {
 		}
 		return b
 	}
-	b += "\n  " + m.theme.selected.Bold(true).Render("Your models") + "\n"
+	yours := slices.ContainsFunc(m.models, func(c core.ModelChoice) bool { return c.Journal != nil || c.Row.LocalPath != "" })
+	title := map[bool]string{true: "Your models", false: "Picks for this Mac"}[yours]
+	b += "\n  " + m.theme.selected.Bold(true).Render(title) + "\n"
 	for i, choice := range m.models {
 		mark, state, style := "○", choice.Download.String()+" · not on disk", m.theme.dim
 		speed := estimated(choice.Speed)

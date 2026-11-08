@@ -587,7 +587,7 @@ func TestCalibrationScreenAndPersistence(t *testing.T) {
 			t.Fatal(job, m.View().Content)
 		}
 	}
-	if m.screen() != Recipes {
+	if m.screen() != Home {
 		t.Fatal(m.screen())
 	}
 	_ = m.cfg.Store.Read("prefs.json", &prefs)
