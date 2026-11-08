@@ -46,7 +46,7 @@ const usage = `triaLM — try a local coding model before you download it
   trialm try [model]         a private, paced cloud trial
   trialm setup <model>       approve, install and verify a local setup
   trialm launch [tool]       open your coding tool on a Ready setup
-  trialm key                 OpenRouter sign-in
+  trialm key                 sign in for $1 of free trial credit (--own: your OpenRouter key)
 
 Flags: --plain --json. More: trialm help advanced
 `

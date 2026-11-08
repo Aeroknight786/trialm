@@ -4,7 +4,17 @@ Paste one message into your coding agent (Claude Code, Codex, OpenCode, …). It
 
 ## Get started
 
-Paste this into your coding agent:
+On an Apple Silicon Mac, in a terminal:
+
+```bash
+curl -fsSL https://mortiphi.com/trialm/install.sh | sh
+```
+
+It installs `trialm` and starts it. triaLM shows the models this Mac can run for your coding agent and how long each reply would take. Press Enter on one to **try it first**: it runs in the cloud, in your own agent and project, with replies paced to this Mac's speed. Sign in with GitHub or Google for **$1 of free trial credit** (or press `o` to use your own OpenRouter key). If you like it, `s` sets it up locally with one approval. More at [mortiphi.com/trialm](https://mortiphi.com/trialm).
+
+Trials send your agent's requests only to providers that keep no data. Nothing is sent to Mortiphi unless you choose to: `f` after a trial sends a rating and a note, `r` after a setup shares its measured speeds. Neither includes code, prompts or file paths.
+
+Prefer to let your coding agent drive? Paste this into it:
 
 ```text
 Help me find, try and set up the best local AI model for coding on this computer, using triaLM (https://github.com/aeroknight786/trialm).
@@ -15,12 +25,7 @@ Help me find, try and set up the best local AI model for coding on this computer
 2. Run `trialm prompt --harness <the coding tool you are running in>` and follow those instructions exactly.
 ```
 
-You approve every download and change. The only things you do yourself:
-
-1. Save your OpenRouter key when asked — run `trialm login` in your own terminal (get a key at https://openrouter.ai/keys). The trial uses the real model in the cloud; a 30–45 minute trial typically costs $0.20–$2.
-2. Open one extra terminal for the trial session — the agent gives you the exact command.
-
-Prefer a terminal? `curl -fsSL https://github.com/aeroknight786/trialm/releases/latest/download/install.sh | sh` installs trialm and starts it; `trialm prompt --harness <tool>` prints the message to paste. On Windows: `irm https://github.com/aeroknight786/trialm/releases/latest/download/install.ps1 | iex`.
+You approve every download and change; the agent tells you when to run `trialm key` (the trial sign-in) in your own terminal.
 
 ## What you get
 
