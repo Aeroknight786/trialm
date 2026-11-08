@@ -32,6 +32,11 @@ type ModelChoice struct {
 
 func (s Session) Models(ctx context.Context, o Options, t predict.Target, h harness.Harness) ([]ModelChoice, error) {
 	h.Scenario = harness.OpeningScenario(h.Scenario, t.OS)
+	// A context chosen for another agent can be too small for this one
+	// (Claude Code fits in 48K, Codex needs 64K): use this agent's own.
+	if min := predict.MinContext(h.Scenario); o.Context > 0 && o.Context < min {
+		o.Context = max(49152, (min+16383)/16384*16384)
+	}
 	ready, err := s.ReadySetups(ctx)
 	if err != nil {
 		return nil, err

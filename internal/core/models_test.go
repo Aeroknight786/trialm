@@ -300,3 +300,22 @@ func TestMeasuredOpeningChangesFirstReply(t *testing.T) {
 		t.Fatal("opening measurement did not affect only the uncached opening at fixed context", a, b)
 	}
 }
+
+// The picks never come back empty because the saved context suits another
+// agent: 48K is fine for Claude Code but below Codex's 64K minimum.
+func TestPicksSurviveAContextChosenForAnotherAgent(t *testing.T) {
+	t.Setenv("TRIALM_HOME", t.TempDir())
+	s := Session{}
+	o := Options{Device: "Apple M5", RAM: 24, Runtime: "all", Tuned: true, Context: 49152, Use: "agent", QualityFloor: "3bit-ok"}
+	d, e := s.Detect(context.Background(), o)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, tool := range []string{"claude-code", "codex", "opencode"} {
+		h, _ := harness.Get(tool)
+		rows, e := s.Models(context.Background(), o, d.Target, h)
+		if e != nil || len(rows) == 0 {
+			t.Fatal(tool, len(rows), e)
+		}
+	}
+}
