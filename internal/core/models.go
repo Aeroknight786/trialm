@@ -145,6 +145,9 @@ func cachedModel(home, root string, m catalog.Model, q catalog.Quant) string {
 		return ""
 	}
 	roots := []string{filepath.Join(hub, "models--"+strings.ReplaceAll(repo, "/", "--"), "snapshots"), filepath.Join(home, ".lmstudio", "models", repo), filepath.Join(home, ".cache", "lm-studio", "models", repo)}
+	// triaLM's own downloads: ~/.trialm/models/<model>-<quant>-<engine>/.
+	own, _ := filepath.Glob(filepath.Join(root, "models", setup.Slug(m.ID+"-"+q.Name)+"-*"))
+	roots = append(roots, own...)
 	found := ""
 	for _, base := range roots {
 		_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, e error) error {
@@ -320,3 +323,10 @@ func OpeningPromptFigure(sc predict.Scenario, tool string) figure.Figure {
 	}
 	return figure.Band(float64(sc.BasePromptTokens)/1000, 20, "", figure.Measured, "harness:opening/"+sc.Harness)
 }
+
+// HasSim is true when a model can be tried in the cloud at simulated speed.
+func HasSim(r Row) bool { return r.Result.Model.OpenRouterID != "" }
+
+// TryFirst: a model not on this Mac yet is tried before it is downloaded,
+// when a private cloud host can run it.
+func TryFirst(c ModelChoice) bool { return c.Journal == nil && c.Row.LocalPath == "" && HasSim(c.Row) }

@@ -325,7 +325,7 @@ func (m *Root) try(window bool) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if !hasSim(row) {
+	if !core.HasSim(row) {
 		m.message = "No SIM for this model: no private cloud host, estimates only"
 		return nil
 	}
@@ -856,7 +856,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if choice.Journal != nil {
 					return m, m.launchSetup(*choice.Journal)
 				}
-				if key == "enter" && tryFirst(choice) {
+				if key == "enter" && core.TryFirst(choice) {
 					return m, m.try(false)
 				}
 				return m, m.planSetup()
@@ -1002,7 +1002,7 @@ func (m *Root) footer() string {
 		return "⏎ Calibrate now   s Skip, show models   v Details"
 	case Recipes:
 		if m.cfg.Picker != nil {
-			if r, _ := m.row(); m.gridFocus && !hasSim(r) {
+			if r, _ := m.row(); m.gridFocus && !core.HasSim(r) {
 				return strings.Replace(pick.GridKeys, "⏎ Try   ", "", 1)
 			}
 			if m.gridFocus {
@@ -1046,12 +1046,12 @@ func (m *Root) footer() string {
 	case Home:
 		hint := ""
 		if next := m.nextTool(); next != m.cfg.Preferences.Tool {
-			hint = "    tab " + toolName(next)
+			hint = "    tab Agent"
 		}
-		if m.modelIndex < len(m.models) && tryFirst(m.models[m.modelIndex]) {
+		if m.modelIndex < len(m.models) && core.TryFirst(m.models[m.modelIndex]) {
 			return "⏎ Try in " + toolName(m.cfg.Preferences.Tool) + "    s Set up " + m.models[m.modelIndex].Download.String() + hint + "    / Search    ? Help"
 		}
-		if r, ok := m.row(); !ok || hasSim(r) {
+		if r, ok := m.row(); !ok || core.HasSim(r) {
 			hint += "    t Cloud trial"
 		}
 		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    / Search    ? Help"
