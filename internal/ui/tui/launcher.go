@@ -19,15 +19,6 @@ func (m *Root) nextTool() string {
 	return m.cfg.Tools[(slices.Index(m.cfg.Tools, m.cfg.Preferences.Tool)+1)%len(m.cfg.Tools)]
 }
 
-// hasSim is true when a model can be tried in the cloud at simulated speed.
-func hasSim(r core.Row) bool { return r.Result.Model.OpenRouterID != "" }
-
-// tryFirst: a model that is not on this Mac yet is tried before it is
-// downloaded, when a private cloud host can run it.
-func tryFirst(c core.ModelChoice) bool {
-	return c.Journal == nil && c.Row.LocalPath == "" && hasSim(c.Row)
-}
-
 func toolName(id string) string {
 	if id == "generic" {
 		return "Your own agent"
@@ -65,6 +56,13 @@ func (m *Root) launcher() string {
 	}
 	yours := slices.ContainsFunc(m.models, func(c core.ModelChoice) bool { return c.Journal != nil || c.Row.LocalPath != "" })
 	title := map[bool]string{true: "Your models", false: "Picks for this Mac"}[yours]
+	if len(m.cfg.Tools) > 1 {
+		b += "\n  " + m.theme.dim.Render("Agent") + "  "
+		for _, id := range m.cfg.Tools {
+			b += map[bool]string{true: m.theme.cloud.Render("[" + toolName(id) + "]"), false: m.theme.dim.Render(toolName(id))}[id == m.cfg.Preferences.Tool] + "  "
+		}
+		b += m.theme.dim.Render(" tab") + "\n"
+	}
 	b += "\n  " + m.theme.selected.Bold(true).Render(title) + "\n"
 	for i, choice := range m.models {
 		mark, state, style := "○", choice.Download.String()+" download", m.theme.dim
@@ -78,7 +76,7 @@ func (m *Root) launcher() string {
 		if m.detection.Target.OS == "darwin" {
 			speed = estimated(choice.Reply, true) + " per reply"
 		}
-		if choice.Journal == nil && hasSim(choice.Row) {
+		if choice.Journal == nil && core.HasSim(choice.Row) {
 			state = "SIM · " + state
 		}
 		nameWidth := max(12, min(25, m.width-39))

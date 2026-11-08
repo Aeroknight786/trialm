@@ -319,3 +319,20 @@ func TestPicksSurviveAContextChosenForAnotherAgent(t *testing.T) {
 		}
 	}
 }
+
+// A model triaLM downloaded itself counts as on disk, like one in the
+// Hugging Face or LM Studio caches.
+func TestOwnDownloadsAreOnDisk(t *testing.T) {
+	home, root := t.TempDir(), t.TempDir()
+	t.Setenv("HF_HUB_CACHE", filepath.Join(home, "hf"))
+	m, _ := catalog.Lookup("lfm3:1.7b")
+	q, _ := m.Quant("Q4_K_M")
+	if cachedModel(home, root, m, q) != "" {
+		t.Fatal("nothing is downloaded yet")
+	}
+	file := filepath.Join(root, "models", "lfm3-1-7b-q4-k-m-llamacpp", "LFM3-1.7B-Q4_K_M.gguf")
+	writeModelFixture(t, file, []byte("fixture weights"))
+	if got := cachedModel(home, root, m, q); got != file {
+		t.Fatal(got)
+	}
+}

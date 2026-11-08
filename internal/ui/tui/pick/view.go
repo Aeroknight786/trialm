@@ -205,6 +205,7 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 	}
 	panel += "\nSpeed   " + number(cell.Empty) + " t/s empty → " + number(cell.Speed) + " t/s at " + Context(cell.Context) + map[bool]string{true: "    First reply  ", false: "\nFirst reply  "}[width >= 76] + estimate(cell.First) + "\n"
 	panel += dim(core.Assumes(p.Harness.ID, p.Scenario.BasePromptTokens)) + "\n"
+	panel += dim("Trial and setup both use "+Context(cell.Context)) + "\n"
 	if m.Default.Result.Model.NotForCoding {
 		panel += dim("Its maker does not recommend it for coding") + "\n"
 	}

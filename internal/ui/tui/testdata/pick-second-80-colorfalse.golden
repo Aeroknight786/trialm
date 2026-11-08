@@ -24,6 +24,7 @@ Models · 2 of 14
 │                                                                            │
 │ Speed   ~29 t/s empty → ~16 t/s at 64K    First reply  ~26 s               │
 │ Assumes Codex starts with 9K tokens; plugins add more                      │
+│ Trial and setup both use 64K                                               │
 │ Memory  ██████████████████░░  14.1 of 16 GB                                │
 ╰────────────────────────────────────────────────────────────────────────────╯
 

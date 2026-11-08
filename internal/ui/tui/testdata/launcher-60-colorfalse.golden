@@ -1,5 +1,7 @@
 ✦ triaLM  Codex · Apple M5 · 16 GB for models
 
+  Agent  [Codex]  Claude Code   tab
+
   Your models
   ❯ ● Qwen3.6 35B-A3B       16 s per reply   ready
     ◐ Gemma 4 26B-A4B       ~19 s per reply   SIM · on disk
@@ -12,5 +14,5 @@ download
 
   v0.6.1 available · trialm update
 
-⏎ Run in Codex   tab Claude Code   t Cloud trial   / Search
+⏎ Run in Codex   tab Agent   t Cloud trial   / Search
 ? Help

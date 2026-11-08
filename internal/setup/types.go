@@ -138,6 +138,9 @@ type Input struct {
 	Predicted                                   verify.Predicted
 }
 
+// Slug names a setup's folders (~/.trialm/models/<slug>, setups/<slug>).
+func Slug(s string) string { return slug(s) }
+
 func slug(s string) string {
 	var b strings.Builder
 	for _, r := range strings.ToLower(s) {
