@@ -85,11 +85,8 @@ func (m *Root) body() string {
 		return m.setupBody()
 	case Ready:
 		return m.readyBody()
-	case Launching:
-		if m.cfg.Preferences.Tool == "generic" {
-			return "" // the route draws its own card below
-		}
-		return "Opening " + toolName(m.cfg.Preferences.Tool) + " on the local model…"
+	case Launching: // Your own agent's route draws its own card below
+		return map[bool]string{true: "", false: "Opening " + toolName(m.cfg.Preferences.Tool) + " on the local model…"}[m.cfg.Preferences.Tool == "generic"]
 	case Trial:
 		if m.address != "" {
 			return m.address

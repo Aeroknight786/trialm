@@ -679,7 +679,7 @@ func TestFirstScreenOffersFreeCreditThenShowsWhatIsLeft(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{First}
 	t.Setenv("OPENROUTER_API_KEY", "")
-	if v := strip(m.View().Content); !strings.Contains(v, "Free · $1 of credit") || !strings.Contains(m.footer(), "⏎ Sign in and try") || !strings.Contains(m.footer(), "o Own OpenRouter key") {
+	if v := strip(m.View().Content); !strings.Contains(v, "Free · $1 credit") || !strings.Contains(m.footer(), "⏎ Sign in and try") || !strings.Contains(m.footer(), "o Own OpenRouter key") {
 		t.Fatal(v, m.footer())
 	}
 	if err := m.cfg.Store.SaveKey("fixture-key"); err != nil {

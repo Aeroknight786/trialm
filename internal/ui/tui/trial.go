@@ -13,12 +13,12 @@ func (m *Root) tryBody() string {
 	if r, ok := m.row(); ok {
 		name = r.Result.Model.Name
 	}
-	cost := "Free · $1 of credit when you sign in with GitHub or Google"
+	cost := "Free · $1 credit with GitHub or Google"
 	var credit figure.Figure
 	if m.cfg.Store.Key() != "" && m.cfg.Store.Read("credits.json", &credit) == nil && credit.Unit == "USD" {
 		cost = "$" + fmt.Sprintf("%.2f", credit.V) + " of credit left"
 	}
-	b := "Try " + name + " before you download it\n\n" + m.card("Runs in your own agent and project, paced to this Mac's estimated speed.\n"+cost+" · No download\nYour code goes only to providers that don't collect it") + "\n\n"
+	b := "Try " + name + " before you download it\n\n" + m.card("Runs in your own agent and project, paced to this Mac's estimated speed.\n"+cost+" · ZDR · No download") + "\n\n"
 	if m.busy && m.pendingTrial {
 		return b + "Finish signing in in your browser. Waiting…"
 	}

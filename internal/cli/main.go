@@ -400,7 +400,7 @@ func cmdServe(args []string, try bool) error {
 	logFile := fs.String("log", "", "write request logs to this file (also works in the foreground)")
 	allowOrigin := fs.String("allow-origin", "", "extra allowed browser origins (comma-separated)")
 	force := fs.Bool("force", false, "serve even if the model does not fit")
-	zdr := fs.Bool("zdr", c.prefs.ZDR, "require zero data retention")
+	zdr := fs.Bool("zdr", true, "zero-data-retention providers only (--zdr=false also allows ones that only promise not to collect)")
 	budget := fs.Float64("budget", c.prefs.BudgetUSD, "per-trial USD cap")
 	pace := fs.String("pace", "p50", "p50 | p90 local pacing")
 	serve := fs.Bool("serve", false, "serve in the foreground without launching a tool")
@@ -518,7 +518,9 @@ func cmdServe(args []string, try bool) error {
 	var spending *trial.Budget
 	if uc, ok := client.(*upstream.OpenAICompat); ok {
 		fidelity = "custom endpoint · precision and privacy unverified"
-		if *zdr && uc.BaseURL != upstream.OpenRouterBaseURL {
+		zdrAsked := false
+		fs.Visit(func(f *flag.Flag) { zdrAsked = zdrAsked || f.Name == "zdr" })
+		if *zdr && zdrAsked && uc.BaseURL != upstream.OpenRouterBaseURL {
 			return &exitError{4, "--zdr needs OpenRouter endpoint policy metadata; use --upstream openrouter"}
 		}
 		if uc.Model != m.OpenRouterID {
