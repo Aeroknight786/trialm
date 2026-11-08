@@ -62,7 +62,7 @@ func ListenCallback() (*Callback, error) {
 			case c.codes <- errorPrefix + e:
 			default:
 			}
-			fmt.Fprintln(w, "Sign-in stopped. Go back to your terminal to see why.")
+			donePage(w, "Sign-in stopped", "Go back to your terminal to see why.")
 			return
 		}
 		if code == "" {
@@ -71,7 +71,7 @@ func ListenCallback() (*Callback, error) {
 		}
 		select {
 		case c.codes <- code:
-			fmt.Fprintln(w, "triaLM is signed in. You can close this tab.")
+			donePage(w, "Signed in", "Go back to your terminal. You can close this tab.")
 		default:
 			http.Error(w, "Already received.", 409)
 		}
@@ -110,4 +110,13 @@ func TrialURLs() (authURL, api string) {
 		base = v
 	}
 	return base + "/trialm/connect", base + "/api/trialm"
+}
+
+// donePage is the browser's last screen of a sign-in, drawn like triaLM.
+func donePage(w http.ResponseWriter, title, next string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>triaLM · %[1]s</title>`+
+		`<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0d1117;color:#e6edf3;font:15px/1.6 ui-monospace,'SF Mono',Menlo,monospace">`+
+		`<div style="max-width:60ch;padding:16px"><b style="background:linear-gradient(90deg,#3fb950,#39c5cf,#d2a8ff);-webkit-background-clip:text;background-clip:text;color:transparent">✦ triaLM</b>`+
+		`<h1 style="margin:24px 0 6px;font-size:1.6rem">%[1]s</h1><p style="margin:0;color:#8b949e">%[2]s</p></div>`, title, next)
 }
