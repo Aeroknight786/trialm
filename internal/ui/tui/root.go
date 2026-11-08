@@ -874,7 +874,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "/":
 				return m, m.openSearch()
 			case "c":
-				m.push(Gallery)
+				m.push(Calibrate)
 			}
 		case Recipes:
 			return m, m.pickerKey(key)
@@ -1046,12 +1046,12 @@ func (m *Root) footer() string {
 	case Home:
 		hint := "    tab Agent"
 		if m.modelIndex < len(m.models) && core.TryFirst(m.models[m.modelIndex]) {
-			return "⏎ Try in " + toolName(m.cfg.Preferences.Tool) + "    s Set up " + m.models[m.modelIndex].Download.String() + hint + "    / Search    ? Help"
+			return "⏎ Try in " + toolName(m.cfg.Preferences.Tool) + "    s Set up " + m.models[m.modelIndex].Download.String() + hint + "    / Search    c Calibrate    ? Help"
 		}
 		if r, ok := m.row(); !ok || core.HasSim(r) {
 			hint += "    t Cloud trial"
 		}
-		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    / Search    ? Help"
+		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    / Search    c Calibrate    ? Help"
 	case Summary:
 		return "⏎ Install    f Feedback    m Other models    q Later"
 	case Note:

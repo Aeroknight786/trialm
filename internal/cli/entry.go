@@ -237,7 +237,9 @@ func finish(err error) int {
 		code = 2
 	}
 	if code == 130 && !jsonMode {
-		fmt.Fprintln(os.Stderr, "Stopped.")
+		if currentVerb != "calibrate" { // calibrate says how to resume itself
+			fmt.Fprintln(os.Stderr, "Stopped.")
+		}
 		return code
 	}
 	fmt.Fprintln(os.Stderr, "error:", err)
