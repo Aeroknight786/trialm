@@ -416,6 +416,7 @@ func TestLauncherKeyCount(t *testing.T) {
 			m := fixture(t)
 			home := t.TempDir()
 			t.Setenv("HOME", home)
+			t.Setenv("USERPROFILE", home) // the home folder on Windows
 			t.Setenv("TRIALM_HOME", m.cfg.Store.Dir)
 			t.Setenv("HF_HUB_CACHE", filepath.Join(home, "hf"))
 			t.Setenv("OLLAMA_MODELS", filepath.Join(home, "ollama"))

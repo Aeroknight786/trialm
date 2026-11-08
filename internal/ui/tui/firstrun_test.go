@@ -190,6 +190,7 @@ func TestFreshRunFirstTokenFourKeys(t *testing.T) {
 	defer up.Close()
 	cfg := base.cfg
 	cfg.Store = s
+	cfg.Headless = false // CI runners without a display would sign in by pasting a code
 	cfg.Preferences.FirstRunDone = false
 	cfg.NoColor = true
 	cfg.Detect = func(context.Context) (core.Detection, error) { return base.detection, nil }
