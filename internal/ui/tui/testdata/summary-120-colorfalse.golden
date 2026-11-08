@@ -1,16 +1,21 @@
 ✦ triaLM  Codex · Apple M5 · 16 GB for models
 Your trial of Qwen3.6 35B-A3B
 
-╭───────────────────────────╮╭───────────────────────────╮╭───────────────────────────╮╭───────────────────────────╮
-│Replies                    ││Typical reply              ││Slowest                    ││Cost                       │
-│38                         ││~9.8 s                     ││~41 s                      ││$0.21                      │
-╰───────────────────────────╯╰───────────────────────────╯╰───────────────────────────╯╰───────────────────────────╯
+                in     new    out   time
+First request   9.8k   9.8k   410   31 s
+Follow-ups (37) 41.2k  2.9k   350   11 s average
+                                    1.4 s of it in line
+Our estimate    9.0k   9.0k   300   22 s first reply
+                27.6k  2.5k   300   9.4 s per reply
+
+Tool definitions: 8.3k of the first 9.8k
+built-in 6.2k (14 tools) · jcodemunch 2.1k (82 tools)
+
+Cost $0.21
 
 How did it feel?
 1 Too slow    2 Fine    3 Great
 
-╭────────────────────────────────────────────────────────────────────────────╮
-│ Install? 13.2 GB                                                           │
-╰────────────────────────────────────────────────────────────────────────────╯
+Install? 13.2 GB
 
 ⏎ Install   m Other models   q Later

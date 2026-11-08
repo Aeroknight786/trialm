@@ -364,6 +364,9 @@ func (s *Server) gen(fe api.Frontend) http.HandlerFunc {
 
 		// Record.
 		rec.PromptTokens, rec.CachedTokens, rec.PrefillTokens = plan.PromptTokens, plan.CachedTokens, plan.PrefillTokens
+		if opening(req) && prep.Seq.Len() > 0 {
+			rec.Tools = sim.GroupTools(prep.Req.Tools, float64(plan.PromptTokens)/float64(prep.Seq.Len()))
+		}
 		rec.Cold, rec.LoadReason = plan.Cold, plan.LoadReason
 		rec.QueueSec = queued.Seconds()
 		rec.LoadSec = plan.LoadDur.Seconds()
@@ -595,6 +598,9 @@ func (s *Server) logRecord(n int, rec sim.Record, pl *sim.Plan, prep *sim.Prepar
 		fmt.Fprintf(&b, " (cloud %s)", sim.FormatDur(rec.CloudSec))
 	}
 	b.WriteString("\n")
+	if n := sim.ToolTokens(rec.Tools); n > 0 {
+		fmt.Fprintf(&b, "     ↳ tool definitions %s: %s\n", sim.Kilo(n), sim.ToolsLine(rec.Tools, 4))
+	}
 	if rec.QueueSec > 0.5 {
 		fmt.Fprintf(&b, "     ↳ waited %s for the device (another request was running)\n", sim.FormatDur(rec.QueueSec))
 	}
@@ -728,13 +734,8 @@ func (s *Server) logWarnings(n int, proto string, req *llm.Request) {
 // Requests with assistant history are follow-ups, including tool-result turns.
 func (s *Server) recordOpening(req *llm.Request, tokens int) {
 	id, _ := s.openingHarness.Load().(string)
-	if runtime.GOOS != "darwin" || id == "" {
+	if runtime.GOOS != "darwin" || id == "" || !opening(req) {
 		return
-	}
-	for _, msg := range req.Messages {
-		if msg.Role == "assistant" {
-			return
-		}
 	}
 	if tokens <= 0 {
 		tokens = tok.Render(req, tok.RenderOptions{}).Len()
@@ -742,6 +743,15 @@ func (s *Server) recordOpening(req *llm.Request, tokens int) {
 	if err := harness.RecordOpeningPrompt(id, tokens); err != nil {
 		s.logf("Opening prompt count could not be saved: %v\n", err)
 	}
+}
+
+func opening(req *llm.Request) bool {
+	for _, msg := range req.Messages {
+		if msg.Role == "assistant" {
+			return false
+		}
+	}
+	return true
 }
 
 // ObserveHarness enables opening counts after triaLM's own verification probes.

@@ -1,16 +1,21 @@
 [1;38;2;63;185;80m✦[m[1;38;2;72;189;124m [m[1;38;2;71;193;166mt[m[1;38;2;57;197;207mr[m[1;38;2;57;197;207mi[m[1;38;2;127;190;223ma[m[1;38;2;172;180;239mL[m[1;38;2;210;168;255mM[m[90m  Codex · Apple M5 · 16 GB for models[m
 Your trial of Qwen3.6 35B-A3B
 
-╭─────────────────╮╭─────────────────╮╭─────────────────╮╭─────────────────╮
-│Replies          ││Typical reply    ││Slowest          ││Cost             │
-│38               ││~9.8 s           ││~41 s            ││$0.21            │
-╰─────────────────╯╰─────────────────╯╰─────────────────╯╰─────────────────╯
+                in     new    out   time
+First request   9.8k   9.8k   410   31 s
+Follow-ups (37) 41.2k  2.9k   350   11 s average
+                                    1.4 s of it in line
+Our estimate    9.0k   9.0k   300   22 s first reply
+                27.6k  2.5k   300   9.4 s per reply
+
+Tool definitions: 8.3k of the first 9.8k
+built-in 6.2k (14 tools) · jcodemunch 2.1k (82 tools)
+
+Cost $0.21
 
 How did it feel?
 1 Too slow    2 Fine    3 Great
 
-[36m╭────────────────────────────────────────────────────────────────────────────╮[m
-[36m│[m Install? 13.2 GB                                                           [36m│[m
-[36m╰────────────────────────────────────────────────────────────────────────────╯[m
+Install? 13.2 GB
 
 [90m⏎ Install   m Other models   q Later[m

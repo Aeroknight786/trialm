@@ -24,6 +24,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/setup"
+	"github.com/aeroknight786/trialm/internal/sim"
 	"github.com/aeroknight786/trialm/internal/ui/tui/calprogress"
 	"github.com/aeroknight786/trialm/internal/verify"
 	"github.com/charmbracelet/colorprofile"
@@ -81,7 +82,10 @@ func fixture(t testing.TB) *Root {
 	}
 	m.picker = pickerFixture.value
 	m.picker.Models = append([]core.ConfigModel(nil), pickerFixture.value.Models...)
-	m.last = store.TrialEntry{ID: "fixture", At: time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), Model: "qwen3.6:35b-a3b", Quant: "IQ3_XXS", Runtime: "llamacpp", Band: 60, Report: trial.Report{Requests: 38, LocalSeconds: 840, CloudSeconds: 190, ReadingSeconds: 370, WritingSeconds: 294, BetweenTurnsSeconds: 176, FirstTurn: 10, TypicalTurn: 9.8, SlowestTurn: 41, SlowestCause: "reading", Fidelity: "fp8 (declared), no-logging; upper bound on quality", SpendKnown: true, SpendUSD: .21}}
+	m.last = store.TrialEntry{ID: "fixture", At: time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), Model: "qwen3.6:35b-a3b", Quant: "IQ3_XXS", Runtime: "llamacpp", Band: 60, Report: trial.Report{Requests: 38, LocalSeconds: 840, CloudSeconds: 190, ReadingSeconds: 370, WritingSeconds: 294, BetweenTurnsSeconds: 176, FirstTurn: 10, TypicalTurn: 9.8, SlowestTurn: 41, SlowestCause: "reading", Fidelity: "fp8 (declared), no-logging; upper bound on quality", SpendKnown: true, SpendUSD: .21,
+		First: trial.Turn{In: 9800, New: 9800, Out: 410, Seconds: 31}, FollowUps: trial.Turn{In: 41200, New: 2900, Out: 350, Seconds: 11.2, Waited: 1.4}, FollowUpCount: 37,
+		Tools: []sim.ToolGroup{{Name: "built-in", Tools: 14, Tokens: 6200}, {Name: "jcodemunch", Tools: 82, Tokens: 2100}}},
+		Estimate: &trial.Estimate{FirstIn: 9000, FirstOut: 300, FirstSec: 22, ReplyIn: 27650, ReplyNew: 2500, ReplyOut: 300, ReplySec: 9.4}}
 	m.history = []store.TrialEntry{m.last}
 	m.notice = "v0.6.1 available · trialm update"
 	setupFrame(m)

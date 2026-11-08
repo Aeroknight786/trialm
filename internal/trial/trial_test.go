@@ -288,3 +288,42 @@ func TestPublicEndpointPrivacyJoin(t *testing.T) {
 		t.Fatal(e, err)
 	}
 }
+
+// The owner's Codex trial of 2026-11-08: a 160K opening cancelled while
+// reading, a resent opening and two side requests waiting in line.
+func TestLinesExplainSlowTrial(t *testing.T) {
+	recs := []sim.Record{
+		{PromptTokens: 160085, PrefillTokens: 160085, TotalSec: 607, Cancelled: true, Tools: []sim.ToolGroup{{Name: "codex_apps", Tools: 60, Tokens: 120000}, {Name: "jcodemunch", Tools: 82, Tokens: 21000}}},
+		{PromptTokens: 4800, PrefillTokens: 4800, OutputTokens: 1900, TotalSec: 64, QueueSec: 413},
+		{PromptTokens: 160085, CachedTokens: 14000, PrefillTokens: 146085, OutputTokens: 33, TotalSec: 592, QueueSec: 42},
+		{PromptTokens: 4800, CachedTokens: 4799, PrefillTokens: 1, OutputTokens: 827, TotalSec: 25, QueueSec: 622},
+	}
+	r := Summarize(recs, .31, "")
+	if r.FollowUpCount != 3 || r.First.Seconds != 607 || r.FollowUps.Waited != 359 || r.FollowUps.In != 56561 {
+		t.Fatalf("%+v", r)
+	}
+	got := r.Lines(&Estimate{FirstIn: 9000, FirstOut: 300, FirstSec: 22, ReplyIn: 27650, ReplyNew: 2500, ReplyOut: 300, ReplySec: 19})
+	for _, want := range []string{
+		"First request   160k   160k   0     10 min 07 s, cancelled\n",
+		"Follow-ups (3)  56.6k  50.3k  920   9 min 46 s average\n" + strings.Repeat(" ", 36) + "5 min 59 s of it in line\n",
+		"Our estimate    9.0k   9.0k   300   22 s first reply\n",
+		"                27.6k  2.5k   300   19 s per reply\n",
+		"Tool definitions: 141k of the first 160k\ncodex_apps 120k (60 tools) · jcodemunch 21.0k (82 tools)\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in\n%s", want, got)
+		}
+	}
+}
+
+func TestGroupTools(t *testing.T) {
+	tools := []llm.Tool{{Name: "exec_command", Description: "run"}, {Name: "mcp__jcodemunch__search", Description: "search the index"}, {Name: "mcp__jcodemunch__read", Description: "read"}, {Name: "multi_agent_v1__spawn_agent", Description: "spawn"}}
+	g := sim.GroupTools(tools, 1)
+	names := map[string]int{}
+	for _, x := range g {
+		names[x.Name] = x.Tools
+	}
+	if len(g) != 3 || names["jcodemunch"] != 2 || names["built-in"] != 1 || names["multi_agent_v1"] != 1 || g[0].Name != "jcodemunch" || sim.ToolTokens(g) <= 0 {
+		t.Fatalf("%+v", g)
+	}
+}

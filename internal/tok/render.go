@@ -79,6 +79,9 @@ func RenderAssistantBody(s *Seq, reasoning, content string, calls []llm.ToolCall
 	}
 }
 
+// ToolPieces is how much of a rendered prompt one tool definition takes.
+func ToolPieces(t llm.Tool) int { return len(Pieces(renderTool(t))) + len(Pieces("\n")) }
+
 func renderTool(t llm.Tool) string {
 	var b strings.Builder
 	b.WriteString(t.Name)

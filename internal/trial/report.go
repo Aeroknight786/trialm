@@ -17,6 +17,23 @@ type Report struct {
 	SlowestCause, Fidelity                                                                       string
 	CachedTokens, PromptTokens                                                                   int
 	SpendUSD                                                                                     float64
+	// First and the follow-up average, as the user waited for them.
+	First, FollowUps Turn
+	FollowUpCount    int
+	Tools            []sim.ToolGroup `json:",omitempty"`
+}
+
+// Turn is one request's tokens and time; Seconds includes Waited in line.
+type Turn struct {
+	In, New, Out    int
+	Seconds, Waited float64
+	Cancelled       bool `json:",omitempty"`
+}
+
+// Estimate is what triaLM showed before the trial and the sizes it assumed.
+type Estimate struct {
+	FirstIn, FirstOut, ReplyIn, ReplyNew, ReplyOut int
+	FirstSec, ReplySec                             float64
 }
 
 func Summarize(records []sim.Record, spend float64, fidelity string) Report {
@@ -41,9 +58,12 @@ func Summarize(records []sim.Record, spend float64, fidelity string) Report {
 		}
 		r.PromptTokens += s.PromptTokens
 		r.CachedTokens += s.CachedTokens
+		t := Turn{In: s.PromptTokens, New: s.PrefillTokens, Out: s.OutputTokens, Seconds: s.TotalSec + s.QueueSec, Waited: s.QueueSec, Cancelled: s.Cancelled}
 		if i == 0 {
-			r.FirstTurn = s.TotalSec
+			r.FirstTurn, r.First, r.Tools = s.TotalSec, t, s.Tools
 		} else {
+			f := &r.FollowUps
+			f.In, f.New, f.Out, f.Seconds, f.Waited = f.In+t.In, f.New+t.New, f.Out+t.Out, f.Seconds+t.Seconds, f.Waited+t.Waited
 			turns = append(turns, s.TotalSec)
 			r.BetweenTurnsSeconds += max(0, s.At.Sub(records[i-1].At).Seconds()-records[i-1].TotalSec)
 		}
@@ -60,10 +80,49 @@ func Summarize(records []sim.Record, spend float64, fidelity string) Report {
 		}
 	}
 	sort.Float64s(turns)
-	if len(turns) > 0 {
-		r.TypicalTurn = turns[len(turns)/2]
+	if n := len(turns); n > 0 {
+		r.TypicalTurn = turns[n/2]
+		f := &r.FollowUps
+		r.FollowUpCount, f.In, f.New, f.Out, f.Seconds, f.Waited = n, f.In/n, f.New/n, f.Out/n, f.Seconds/float64(n), f.Waited/float64(n)
 	}
 	return r
+}
+
+// Lines sets what the trial took beside what triaLM estimated, so a slow
+// trial shows its cause: the prompt sizes differ, or requests waited.
+func (r Report) Lines(e *Estimate) string {
+	var b strings.Builder
+	row := func(label string, in, fresh, out int, time ...string) {
+		fmt.Fprintf(&b, "%-15s %-6s %-6s %-5s %s\n", label, sim.Kilo(in), sim.Kilo(fresh), sim.Kilo(out), time[0])
+		for _, t := range time[1:] {
+			fmt.Fprintf(&b, "%36s%s\n", "", t)
+		}
+	}
+	took := func(t Turn, note string) []string {
+		out := []string{sim.FormatDur(t.Seconds) + note}
+		if t.Waited >= 1 {
+			out = append(out, sim.FormatDur(t.Waited)+" of it in line")
+		}
+		return out
+	}
+	fmt.Fprintf(&b, "%-15s %-6s %-6s %-5s %s\n", "", "in", "new", "out", "time")
+	note := ""
+	if r.First.Cancelled {
+		note = ", cancelled"
+	}
+	row("First request", r.First.In, r.First.New, r.First.Out, took(r.First, note)...)
+	if r.FollowUpCount > 0 {
+		f := r.FollowUps
+		row(fmt.Sprintf("Follow-ups (%d)", r.FollowUpCount), f.In, f.New, f.Out, took(f, " average")...)
+	}
+	if e != nil {
+		row("Our estimate", e.FirstIn, e.FirstIn, e.FirstOut, sim.FormatDur(e.FirstSec)+" first reply")
+		row("", e.ReplyIn, e.ReplyNew, e.ReplyOut, sim.FormatDur(e.ReplySec)+" per reply")
+	}
+	if n := sim.ToolTokens(r.Tools); n > 0 {
+		fmt.Fprintf(&b, "\nTool definitions: %s of the first %s\n%s\n", sim.Kilo(n), sim.Kilo(r.First.In), sim.ToolsLine(r.Tools, 3))
+	}
+	return b.String()
 }
 func (r Report) Plain(band int) string {
 	var b strings.Builder

@@ -40,13 +40,11 @@ func (m *Root) summaryBody() string {
 			size = figure.Bytes(q.FileBytes, "catalog:file")
 		}
 	}
-	b := "Your trial of " + name + "\n\n"
-	cost := "Unknown"
+	cost := "Cost unknown"
 	if r.SpendKnown {
-		cost = "$" + fmt.Sprintf("%.2f", r.SpendUSD)
+		cost = "Cost $" + fmt.Sprintf("%.2f", r.SpendUSD)
 	}
-	values := []string{fmt.Sprint(r.Requests), figure.Band(r.TypicalTurn, m.last.Band, "s", figure.Simulated, "trial:observed").String(), figure.Band(r.SlowestTurn, m.last.Band, "s", figure.Simulated, "trial:observed").String(), cost}
-	b += m.tiles([]string{"Replies", "Typical reply", "Slowest", "Cost"}, values, nil) + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\n" + m.card("Install? "+size.String())
+	b := "Your trial of " + name + "\n\n" + r.Lines(m.last.Estimate) + "\n" + cost + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\nInstall? " + size.String()
 	if m.expanded {
 		b += "\n" + r.Plain(m.last.Band)
 	}
