@@ -11,6 +11,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/setup"
+	"github.com/aeroknight786/trialm/internal/signin"
 	"github.com/aeroknight786/trialm/internal/store"
 )
 
@@ -29,8 +30,12 @@ func SessionConfig(ctx context.Context, s store.Store, p store.Preferences, o co
 		}
 	}
 	cfg.Headless = os.Getenv("SSH_CONNECTION") != "" || (runtime.GOOS != "darwin" && runtime.GOOS != "windows" && os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "")
-	cfg.Authorize = func(ctx context.Context, key string) error {
-		return Authorize(ctx, s, openrouter.Client{}, "", OpenBrowser, key)
+	cfg.Authorize = func(ctx context.Context, key string, trial bool) error {
+		return signin.Authorize(ctx, s, trial, signin.OpenBrowser, key)
+	}
+	cfg.Credits = func(ctx context.Context) (float64, error) { return openrouter.Client{Key: s.Key()}.Credits(ctx) }
+	cfg.SendFeedback = func(ctx context.Context, kind string, data map[string]any) error {
+		return signin.SendFeedback(ctx, s, version, kind, data)
 	}
 	cfg.Detect = func(ctx context.Context) (core.Detection, error) { return (core.Session{}).Detect(ctx, o) }
 	cfg.Find = func(ctx context.Context, p store.Preferences) (core.Listing, error) {

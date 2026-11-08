@@ -6,14 +6,23 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/aeroknight786/trialm/internal/paths"
 )
 
-type Store struct{ Dir string }
+type Store struct {
+	Dir string
+	// Keychain keeps the OpenRouter key in the macOS Keychain. Only the real
+	// home uses it: never a TRIALM_HOME folder, so tests cannot reach it.
+	Keychain bool
+}
 
-func Default() Store { d, _ := paths.Home(); return Store{Dir: d} }
+func Default() Store {
+	d, _ := paths.Home()
+	return Store{Dir: d, Keychain: runtime.GOOS == "darwin" && paths.Getenv("HOME") == ""}
+}
 func (s Store) Write(name string, v any) error {
 	if err := os.MkdirAll(s.Dir, 0700); err != nil {
 		return err
@@ -49,6 +58,11 @@ func (s Store) Key() string {
 	if k := os.Getenv("OPENROUTER_API_KEY"); k != "" {
 		return k
 	}
+	if s.Keychain {
+		if k := keychainGet(); k != "" {
+			return k
+		}
+	}
 	var c struct {
 		Key string `json:"openrouter_key"`
 	}
@@ -63,9 +77,16 @@ func (s Store) SaveKey(key string) error {
 	if strings.TrimSpace(key) == "" {
 		return errors.New("empty OpenRouter key")
 	}
+	if s.Keychain && keychainSet(strings.TrimSpace(key)) {
+		_ = os.Remove(filepath.Join(s.Dir, "credentials"))
+		return nil
+	}
 	return s.Write("credentials", map[string]string{"openrouter_key": strings.TrimSpace(key)})
 }
 func (s Store) RemoveKey() error {
+	if s.Keychain {
+		keychainDelete()
+	}
 	err := os.Remove(filepath.Join(s.Dir, "credentials"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err

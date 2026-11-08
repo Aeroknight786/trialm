@@ -15,10 +15,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"github.com/aeroknight786/trialm/internal/core"
+	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/hw"
-	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/setup"
+	"github.com/aeroknight786/trialm/internal/signin"
 	"github.com/aeroknight786/trialm/internal/store"
 	"github.com/aeroknight786/trialm/internal/ui/tui/pick"
 	"github.com/aeroknight786/trialm/internal/ui/window"
@@ -33,6 +34,7 @@ const (
 	Calibrate Screen = "calibrate"
 	First     Screen = "try-first"
 	Paste     Screen = "paste"
+	Note      Screen = "note"
 	Recipes   Screen = "recipes"
 	Details   Screen = "details"
 	Trial     Screen = "trial"
@@ -63,7 +65,9 @@ type Config struct {
 	Preferences     store.Preferences
 	Detect          func(context.Context) (core.Detection, error)
 	Find            func(context.Context, store.Preferences) (core.Listing, error)
-	Authorize       func(context.Context, string) error
+	Authorize       func(ctx context.Context, pasted string, trial bool) error
+	Credits         func(context.Context) (float64, error)
+	SendFeedback    func(ctx context.Context, kind string, data map[string]any) error
 	TrialArgs       func(core.Row, store.Preferences) []string
 	Window          func(context.Context, []string) error
 	UpdateNotice    func(context.Context) string
@@ -82,6 +86,11 @@ type powerMsg struct {
 	servers []hw.ModelServer
 }
 type serversMsg []hw.ModelServer
+type creditMsg struct {
+	v   float64
+	err error
+}
+type feedbackMsg struct{ err error }
 type calibrationPresenceMsg bool
 type detectDoneMsg struct{}
 type pickerMsg struct {
@@ -105,7 +114,7 @@ type recipesMsg struct {
 }
 type authorizedMsg struct{ err error }
 type headlessReadyMsg struct {
-	login *headlessLogin
+	login *signin.Headless
 	err   error
 }
 type noticeMsg string
@@ -133,6 +142,7 @@ type Root struct {
 	sparkle                       int
 	rawError                      string
 	pendingTrial                  bool
+	trialSignIn                   bool // the sign-in under way is the free trial one
 	trialRow                      *core.Row
 	trialWindow                   bool
 	address                       string
@@ -146,6 +156,8 @@ type Root struct {
 	secret          string
 	password        *huh.Input
 	search          textinput.Model
+	note            textinput.Model
+	creditLeft      *float64
 	spin            spinner.Model
 	bar             progress.Model
 	busy            bool
@@ -158,7 +170,7 @@ type Root struct {
 	chatStop        func() error
 	Error           error
 	meter           window.Meter
-	headless        *headlessLogin
+	headless        *signin.Headless
 	authURL         string
 	autoQuality     bool
 }
@@ -508,7 +520,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.back()
 				m.password = nil
 			}
-			m.message = "Could not connect OpenRouter. Press p to paste a key or try again."
+			m.message = signin.Explain(v.err, m.trialSignIn)
 			return m, nil
 		}
 		if m.cfg.DirectArgs != nil {
@@ -518,6 +530,20 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.afterKey()
 	case noticeMsg:
 		m.notice = string(v)
+	case creditMsg:
+		if v.err == nil {
+			m.creditLeft = &v.v
+			_ = m.cfg.Store.Write("credits.json", figure.Exact(v.v, "USD", figure.Measured, "openrouter:/key"))
+		}
+	case feedbackMsg:
+		m.busy = false
+		if m.screen() == Note {
+			m.back()
+		}
+		m.message = "Thanks, sent."
+		if v.err != nil {
+			m.message = "Could not send that. Press f to try again."
+		}
 	case windowDoneMsg:
 		if v.err != nil {
 			m.busy = false
@@ -542,6 +568,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.history) > 0 {
 				m.last = m.history[len(m.history)-1]
 				m.replace(Summary)
+				return m, m.refreshCredits()
 			} else {
 				m.back()
 				m.message = "Trial finished. No requests were recorded."
@@ -586,6 +613,11 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.screen() == Paste && m.password != nil {
 			_, cmd := m.password.Update(v)
+			return m, cmd
+		}
+		if m.screen() == Note && !m.busy {
+			var cmd tea.Cmd
+			m.note, cmd = m.note.Update(v)
 			return m, cmd
 		}
 		if m.screen() == Chat && !m.chat.busy {
@@ -635,7 +667,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			if m.headless != nil {
-				m.headless.close()
+				m.headless.Close()
 				m.headless = nil
 			}
 			if m.calibration != nil {
@@ -667,13 +699,28 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, m.chat.update(v)
 		}
+		if m.screen() == Note {
+			if m.busy {
+				return m, nil
+			}
+			switch key {
+			case "esc":
+				m.back()
+				return m, nil
+			case "enter":
+				return m, m.share("trial", signin.TrialFeedback(m.last, m.note.Value(), m.cfg.Preferences.Tool, m.detection.Target.Name))
+			}
+			var cmd tea.Cmd
+			m.note, cmd = m.note.Update(msg)
+			return m, cmd
+		}
 		if m.screen() == Paste && m.busy {
 			return m, nil
 		}
 		if m.screen() == Paste {
 			if key == "esc" {
 				if m.headless != nil {
-					m.headless.close()
+					m.headless.Close()
 					m.headless = nil
 				}
 				m.authURL = ""
@@ -686,9 +733,9 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					login := m.headless
 					secret := m.secret
 					m.busy = true
-					return m, func() tea.Msg { return authorizedMsg{login.finish(m.cfg.Context, secret)} }
+					return m, func() tea.Msg { return authorizedMsg{login.Finish(m.cfg.Context, secret)} }
 				}
-				return m, m.authorize(m.secret)
+				return m, m.authorize(m.secret, false)
 			}
 			_, cmd := m.password.Update(msg)
 			return m, cmd
@@ -774,7 +821,10 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, m.startTrial()
 				}
 				m.pendingTrial = true
-				return m, m.authorize("")
+				return m, m.authorize("", true)
+			case "o":
+				m.pendingTrial = true
+				return m, m.authorize("", false)
 			case "tab":
 				tools := core.TrialAgents(m.cfg.Preferences)
 				for i, id := range tools {
@@ -795,7 +845,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Home:
 			switch key {
 			case "s", "enter":
-				if key == "s" || m.detecting {
+				if m.detecting {
 					return m, nil
 				}
 				if m.modelIndex >= len(m.models) {
@@ -805,6 +855,9 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				choice := m.models[m.modelIndex]
 				if choice.Journal != nil {
 					return m, m.launchSetup(*choice.Journal)
+				}
+				if key == "enter" && tryFirst(choice) {
+					return m, m.try(false)
 				}
 				return m, m.planSetup()
 			case "up", "k":
@@ -871,6 +924,14 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.find()
 			case "s", "enter":
 				return m, m.planSetup()
+			case "f":
+				if m.cfg.SendFeedback != nil {
+					m.note = textinput.New()
+					m.note.Placeholder = "What worked, what got in the way (optional)"
+					m.note.SetWidth(max(20, min(m.width, 80)-4))
+					m.push(Note)
+					return m, m.note.Focus()
+				}
 			}
 		case Setup:
 			if (key == "enter" || key == "y" || key == "Y") && m.setup.plan.ID != "" && m.cfg.Apply != nil {
@@ -886,6 +947,9 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if key == "enter" {
 				return m, m.launchSetup(m.setup.journal)
+			}
+			if key == "r" && m.setup.report != nil && !m.busy {
+				return m, m.share("setup", signin.SetupReport(m.setup.plan, *m.setup.report, m.detection.Target.Name))
 			}
 		case Gallery:
 			if key == "down" || key == "j" {
@@ -907,11 +971,15 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 func (m *Root) openSearch() tea.Cmd { m.push(Search); return m.search.Focus() }
-func (m *Root) authorize(secret string) tea.Cmd {
+
+// authorize signs in: the free trial sign-in at mortiphi.com when trial,
+// else the user's own OpenRouter account (or a pasted key).
+func (m *Root) authorize(secret string, trial bool) tea.Cmd {
+	m.trialSignIn = trial
 	if m.cfg.Headless && m.screen() == First && secret == "" {
 		m.busy = true
 		return func() tea.Msg {
-			h, e := beginHeadless(m.cfg.Store, openrouter.Client{}, "")
+			h, e := signin.BeginHeadless(m.cfg.Store, trial)
 			return headlessReadyMsg{h, e}
 		}
 	}
@@ -919,7 +987,7 @@ func (m *Root) authorize(secret string) tea.Cmd {
 		return nil
 	}
 	m.busy = true
-	return func() tea.Msg { return authorizedMsg{m.cfg.Authorize(m.cfg.Context, secret)} }
+	return func() tea.Msg { return authorizedMsg{m.cfg.Authorize(m.cfg.Context, secret, trial)} }
 }
 func (m *Root) footer() string {
 	switch m.screen() {
@@ -950,7 +1018,7 @@ func (m *Root) footer() string {
 		return "⏎ Install    esc Back    v Details"
 	}
 	if m.screen() == Ready {
-		return "⏎ Open " + toolName(m.cfg.Preferences.Tool) + " now    q Later    v Details"
+		return "⏎ Open " + toolName(m.cfg.Preferences.Tool) + " now    r Share speeds    q Later    v Details"
 	}
 	if m.busy || (m.screen() == Chat && m.chat.busy) {
 		return "ctrl-c stop"
@@ -964,11 +1032,10 @@ func (m *Root) footer() string {
 		if m.cfg.Preferences.Tool == "generic" {
 			tool = "Your own agent"
 		}
-		hint := "⏎ Try in " + tool
 		if m.cfg.Store.Key() == "" {
-			hint += "    p Paste key"
+			return "⏎ Sign in and try in " + tool + "    o Own OpenRouter key    tab Agent    esc Back"
 		}
-		return hint + "    tab Agent    esc Back"
+		return "⏎ Try in " + tool + "    tab Agent    esc Back"
 	case Paste:
 		return "⏎ Connect    esc Back"
 
@@ -981,12 +1048,17 @@ func (m *Root) footer() string {
 		if next := m.nextTool(); next != m.cfg.Preferences.Tool {
 			hint = "    tab " + toolName(next)
 		}
+		if m.modelIndex < len(m.models) && tryFirst(m.models[m.modelIndex]) {
+			return "⏎ Try in " + toolName(m.cfg.Preferences.Tool) + "    s Set up " + m.models[m.modelIndex].Download.String() + hint + "    / Search    ? Help"
+		}
 		if r, ok := m.row(); !ok || hasSim(r) {
 			hint += "    t Cloud trial"
 		}
 		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    / Search    ? Help"
 	case Summary:
-		return "⏎ Install    m Other models    q Later"
+		return "⏎ Install    f Feedback    m Other models    q Later"
+	case Note:
+		return "⏎ Send    esc Cancel"
 	case Gallery:
 		return "↑↓ move  enter claim  esc back  q quit"
 	case ClaimCard:
@@ -1048,4 +1120,20 @@ func terminalResult(err, modelError error) error {
 		return err
 	}
 	return modelError
+}
+
+func (m *Root) refreshCredits() tea.Cmd {
+	if m.cfg.Credits == nil {
+		return nil
+	}
+	return func() tea.Msg { v, e := m.cfg.Credits(m.cfg.Context); return creditMsg{v, e} }
+}
+
+// share sends what the user chose to send (a trial note, a setup's speeds).
+func (m *Root) share(kind string, data map[string]any) tea.Cmd {
+	if m.cfg.SendFeedback == nil {
+		return nil
+	}
+	m.busy = true
+	return func() tea.Msg { return feedbackMsg{m.cfg.SendFeedback(m.cfg.Context, kind, data)} }
 }

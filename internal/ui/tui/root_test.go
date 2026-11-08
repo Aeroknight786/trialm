@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,7 +29,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/aeroknight786/trialm/internal/openrouter"
+	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/store"
 	"github.com/aeroknight786/trialm/internal/trial"
 )
@@ -662,32 +661,6 @@ func TestQualityDefaultFollowsGPU(t *testing.T) {
 		}
 	}
 }
-func TestHeadlessCodeAgainstFake(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/auth/keys" {
-			fmt.Fprint(w, `{"key":"fake-secret"}`)
-		} else {
-			fmt.Fprint(w, `{"data":{"total_credits":10,"total_usage":1}}`)
-		}
-	}))
-	defer srv.Close()
-	s := store.Store{Dir: t.TempDir()}
-	h, e := beginHeadless(s, openrouter.Client{BaseURL: srv.URL}, srv.URL+"/auth")
-	if e != nil {
-		t.Fatal(e)
-	}
-	if strings.Contains(h.URL, h.verifier) || !strings.Contains(h.URL, "S256") {
-		t.Fatal("invalid public authorization URL")
-	}
-	if e = h.finish(context.Background(), "http://127.0.0.1/callback?code=one-use-code"); e != nil {
-		t.Fatal(e)
-	}
-	t.Setenv("OPENROUTER_API_KEY", "")
-	if s.Key() != "fake-secret" {
-		t.Fatal("key not saved")
-	}
-}
-
 func TestInterruptMapsToExit130(t *testing.T) {
 	m := fixture(t)
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
@@ -699,12 +672,23 @@ func TestInterruptMapsToExit130(t *testing.T) {
 	}
 }
 
-func TestFirstScreenUsesSavedBudget(t *testing.T) {
+// Before sign-in the trial screen offers the free credit and signs in on
+// Enter (o for an own key); after it, it shows what is left.
+func TestFirstScreenOffersFreeCreditThenShowsWhatIsLeft(t *testing.T) {
 	m := fixture(t)
 	m.stack = []Screen{First}
-	m.cfg.Preferences.BudgetUSD = 5
-	if !strings.Contains(m.View().Content, "$0.20–2") {
-		t.Fatal(m.View().Content)
+	t.Setenv("OPENROUTER_API_KEY", "")
+	if v := strip(m.View().Content); !strings.Contains(v, "Free · $1 of credit") || !strings.Contains(m.footer(), "⏎ Sign in and try") || !strings.Contains(m.footer(), "o Own OpenRouter key") {
+		t.Fatal(v, m.footer())
+	}
+	if err := m.cfg.Store.SaveKey("fixture-key"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.cfg.Store.Write("credits.json", figure.Exact(0.84, "USD", figure.Measured, "test")); err != nil {
+		t.Fatal(err)
+	}
+	if v := strip(m.View().Content); !strings.Contains(v, "$0.84 of credit left") || strings.Contains(m.footer(), "Sign in") {
+		t.Fatal(v, m.footer())
 	}
 }
 
@@ -767,7 +751,7 @@ func TestFormPreservesExplicitValues(t *testing.T) {
 
 func TestFailedPasteReturnsToKeyChoices(t *testing.T) {
 	m := fixture(t)
-	m.cfg.Authorize = func(context.Context, string) error { return errors.New("private upstream failure") }
+	m.cfg.Authorize = func(context.Context, string, bool) error { return errors.New("private upstream failure") }
 	m.stack = []Screen{First}
 	m.Update(key("p"))
 	m.Update(tea.PasteMsg{Content: "fake-secret"})
@@ -871,7 +855,7 @@ func TestCloudAuthorizationResumesSelectedTrial(t *testing.T) {
 	m.detecting = false
 	m.modelIndex = 1
 	m.cfg.Headless = false
-	m.cfg.Authorize = func(ctx context.Context, key string) error { return m.cfg.Store.SaveKey("fixture-key") }
+	m.cfg.Authorize = func(ctx context.Context, key string, trial bool) error { return m.cfg.Store.SaveKey("fixture-key") }
 	var selected string
 	m.cfg.TrialArgs = func(row core.Row, p store.Preferences) []string { selected = row.Result.Model.ID; return nil }
 	_, cmd := m.Update(key("t"))

@@ -203,7 +203,7 @@ func TestFreshRunFirstTokenFiveKeys(t *testing.T) {
 	cfg.Picker = func(context.Context, core.Detection, store.Preferences) (core.ConfigPicker, error) {
 		return base.picker, nil
 	}
-	cfg.Authorize = func(context.Context, string) error { return s.SaveKey("fake-browser-key") }
+	cfg.Authorize = func(context.Context, string, bool) error { return s.SaveKey("fake-browser-key") }
 	cfg.Process = func(ctx context.Context, _ string, _ []string) *exec.Cmd {
 		cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=TestTrialHelper")
 		cmd.Env = append(os.Environ(), "TRIALM_TUI_HELPER=1", "TRIALM_TUI_ENDPOINT="+up.URL)

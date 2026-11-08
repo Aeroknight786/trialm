@@ -47,6 +47,8 @@ func TestKeyFlowsAgainstFake(t *testing.T) {
 						t.Error("S256 challenge mismatch")
 					}
 					_ = json.NewEncoder(w).Encode(map[string]string{"key": secret})
+				case "/api/v1/key":
+					_, _ = w.Write([]byte(`{"data":{"limit":null,"limit_remaining":null}}`))
 				case "/api/v1/credits":
 					if r.Header.Get("Authorization") != "Bearer "+secret {
 						t.Error("wrong key")

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -24,6 +25,10 @@ func (c Client) Do(ctx context.Context, method, path string, body, out any) erro
 	base := c.BaseURL
 	if base == "" {
 		base = API
+		// A local stand-in for OpenRouter, in end-to-end tests of sign-in.
+		if v := os.Getenv("TRIALM_OPENROUTER_URL"); v != "" {
+			base = v
+		}
 	}
 	var r io.Reader
 	if body != nil {
@@ -58,7 +63,20 @@ func (c Client) Do(ctx context.Context, method, path string, body, out any) erro
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 8<<20)).Decode(out)
 }
+
+// Credits is what this key can still spend. A key with its own limit, such
+// as a $1 trial key minted on someone else's account, reports what is left
+// of that limit; otherwise it is the account's balance.
 func (c Client) Credits(ctx context.Context) (float64, error) {
+	var k struct {
+		Data struct {
+			Limit          *float64 `json:"limit"`
+			LimitRemaining *float64 `json:"limit_remaining"`
+		} `json:"data"`
+	}
+	if c.Do(ctx, "GET", "/key", nil, &k) == nil && k.Data.Limit != nil && k.Data.LimitRemaining != nil {
+		return *k.Data.LimitRemaining, nil
+	}
 	var r struct {
 		Data struct {
 			TotalCredits float64 `json:"total_credits"`
@@ -68,15 +86,26 @@ func (c Client) Credits(ctx context.Context) (float64, error) {
 	err := c.Do(ctx, "GET", "/credits", nil, &r)
 	return r.Data.TotalCredits - r.Data.TotalUsage, err
 }
+
+// Grant is what a sign-in hands back: the OpenRouter key, plus, from the
+// Mortiphi trial sign-in, a token for sending feedback.
+type Grant struct {
+	Key       string `json:"key"`
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expires_at"`
+}
+
 func (c Client) Exchange(ctx context.Context, code, verifier string) (string, error) {
-	var r struct {
-		Key string `json:"key"`
+	g, err := c.Grant(ctx, code, verifier)
+	return g.Key, err
+}
+func (c Client) Grant(ctx context.Context, code, verifier string) (Grant, error) {
+	var g Grant
+	err := c.Do(ctx, "POST", "/auth/keys", map[string]string{"code": code, "code_verifier": verifier, "code_challenge_method": "S256"}, &g)
+	if err == nil && g.Key == "" {
+		err = fmt.Errorf("no key was returned")
 	}
-	err := c.Do(ctx, "POST", "/auth/keys", map[string]string{"code": code, "code_verifier": verifier, "code_challenge_method": "S256"}, &r)
-	if err == nil && r.Key == "" {
-		err = fmt.Errorf("OpenRouter returned no key")
-	}
-	return r.Key, err
+	return g, err
 }
 
 // Price is USD per token, as supplied by the endpoints API.

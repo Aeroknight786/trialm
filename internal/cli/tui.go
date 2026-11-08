@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/aeroknight786/trialm/internal/harness"
-	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/predict"
+	"github.com/aeroknight786/trialm/internal/signin"
 	"github.com/aeroknight786/trialm/internal/store"
 	"github.com/aeroknight786/trialm/internal/ui/tui"
 )
@@ -53,8 +53,8 @@ func runTUI(ctx context.Context, verb string, args []string) error {
 	if *claims {
 		cfg.Start = tui.Gallery
 	}
-	cfg.Authorize = func(ctx context.Context, pasted string) error {
-		return tui.Authorize(ctx, cfg.Store, openrouter.Client{}, "", openBrowser, pasted)
+	cfg.Authorize = func(ctx context.Context, pasted string, trial bool) error {
+		return signin.Authorize(ctx, cfg.Store, trial, openBrowser, pasted)
 	}
 	cfg.AutomaticWindow = autoWindow()
 	cfg.Window = func(ctx context.Context, args []string) error { return runWindow(ctx, args, nil) }

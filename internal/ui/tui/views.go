@@ -35,6 +35,8 @@ func (m *Root) body() string {
 		return m.calibrationBody()
 	case First:
 		return m.tryBody()
+	case Note:
+		return "How did the trial go?\n\n" + m.note.View() + "\n\n" + m.theme.dim.Render(wrap("Sends your rating, this note, the model, this Mac's chip and memory, and the timings from the trial. Never your code, prompts or file paths.", max(20, min(m.width, 80)-2)))
 	case Paste:
 		if m.password == nil {
 			return "OpenRouter key"

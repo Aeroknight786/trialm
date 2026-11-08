@@ -22,6 +22,9 @@ type KeyFlow struct {
 	Open     func(string) error
 	Secret   func(string) (string, error)
 	Headless bool
+	// Trial makes the free trial sign-in at mortiphi.com the default;
+	// --own then uses the user's own OpenRouter account.
+	Trial bool
 
 	Output io.Writer
 	Emit   func(string, any, ...core.Next) error
@@ -33,6 +36,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 	paste := fs.Bool("paste", false, "paste a key into a masked terminal input")
 	remove := fs.Bool("remove", false, "remove stored keys")
 	headless := fs.Bool("headless", f.Headless, "copy an authorization code in a terminal")
+	own := fs.Bool("own", false, "use your own OpenRouter account instead of the free trial sign-in")
 	fs.Bool("json", false, "NDJSON output")
 	err := fs.Parse(args)
 	pos := fs.Args()
@@ -40,7 +44,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 		return err
 	}
 	if len(pos) > 0 {
-		return errors.New("usage: trialm key [--paste|--headless|--remove]")
+		return errors.New("usage: trialm key [--own] [--paste|--headless|--remove]")
 	}
 	if *paste && *remove {
 		return errors.New("usage: choose --paste or --remove")
@@ -54,7 +58,12 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	key := f.Store.Key()
+	key, token := f.Store.Key(), ""
+	trial := f.Trial && !*own && !*paste
+	authURL, client := f.AuthURL, f.Client
+	if trial {
+		authURL, client.BaseURL = openrouter.TrialURLs()
+	}
 	if *paste {
 		key, err = f.Secret("OpenRouter key: ")
 		if err != nil {
@@ -73,7 +82,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 			return f.Needs("--paste", "cannot bind a localhost OAuth callback")
 		}
 		defer callback.Close()
-		auth := pkce.URL(f.AuthURL, callback.URL)
+		auth := pkce.URL(authURL, callback.URL)
 		// This URL contains the public challenge, never a key, code or verifier.
 		if err := f.Emit("needs_user", map[string]any{"needs": "authorization", "url": auth, "run": "trialm key --headless"}); err != nil {
 			return err
@@ -92,22 +101,26 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 			if err = f.Open(auth); err != nil {
 				return f.Needs("--headless or --paste", "cannot open a browser")
 			}
-			fmt.Fprintln(f.Output, "Authorize triaLM in your browser.")
+			fmt.Fprintln(f.Output, map[bool]string{true: "Sign in with GitHub or Google in your browser.", false: "Authorize triaLM in your browser."}[trial])
 			code, err = callback.Wait(ctx)
 		}
 		if err != nil {
 			return err
 		}
-		key, err = f.Client.Exchange(ctx, strings.TrimSpace(code), pkce.Verifier)
+		g, err := client.Grant(ctx, strings.TrimSpace(code), pkce.Verifier)
 		if err != nil {
 			return err
 		}
+		key, token = g.Key, g.Token
 	}
 	if strings.TrimSpace(key) == "" {
 		return f.Needs("--paste", "no OpenRouter key")
 	}
 	c := f.Client
 	c.Key = key
+	if trial {
+		c.BaseURL = "" // the key is OpenRouter's, wherever it came from
+	}
 	balance, err := c.Credits(ctx)
 	if err != nil {
 		return err
@@ -117,7 +130,12 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 			return err
 		}
 	}
+	if token != "" {
+		if err = f.Store.Write("trial.json", map[string]string{"token": token}); err != nil {
+			return err
+		}
+	}
 	credit := figure.Exact(balance, "USD", figure.Measured, "openrouter:/credits")
-	fmt.Fprintln(f.Output, "OpenRouter ready ·", credit.String(), "credit")
+	fmt.Fprintln(f.Output, map[bool]string{true: "Signed in ·", false: "OpenRouter ready ·"}[trial], credit.String(), map[bool]string{true: "of free trial credit", false: "credit"}[trial])
 	return f.Emit("result", map[string]any{"key_configured": true, "balance": credit}, core.Next{Cmd: "trialm find --json", Why: "find a model"})
 }

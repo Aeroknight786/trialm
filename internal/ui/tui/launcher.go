@@ -22,6 +22,12 @@ func (m *Root) nextTool() string {
 // hasSim is true when a model can be tried in the cloud at simulated speed.
 func hasSim(r core.Row) bool { return r.Result.Model.OpenRouterID != "" }
 
+// tryFirst: a model that is not on this Mac yet is tried before it is
+// downloaded, when a private cloud host can run it.
+func tryFirst(c core.ModelChoice) bool {
+	return c.Journal == nil && c.Row.LocalPath == "" && hasSim(c.Row)
+}
+
 func toolName(id string) string {
 	if id == "generic" {
 		return "Your own agent"

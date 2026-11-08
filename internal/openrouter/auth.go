@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -55,6 +57,14 @@ func ListenCallback() (*Callback, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+path, func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
+		if e := r.URL.Query().Get("error"); e != "" && code == "" {
+			select {
+			case c.codes <- errorPrefix + e:
+			default:
+			}
+			fmt.Fprintln(w, "Sign-in stopped. Go back to your terminal to see why.")
+			return
+		}
 		if code == "" {
 			http.Error(w, "No authorization code.", 400)
 			return
@@ -74,8 +84,30 @@ func (c *Callback) Close() { _ = c.srv.Close() }
 func (c *Callback) Wait(ctx context.Context) (string, error) {
 	select {
 	case code := <-c.codes:
+		if e, ok := strings.CutPrefix(code, errorPrefix); ok {
+			return "", SignInError(e)
+		}
 		return code, nil
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
+}
+
+const errorPrefix = "\x00error:"
+
+// SignInError is the reason a sign-in page gave for stopping (for example
+// "trial_used"), sent back to the callback as ?error=.
+type SignInError string
+
+func (e SignInError) Error() string { return "sign-in stopped: " + string(e) }
+
+// Trial sign-in at mortiphi.com speaks the same PKCE contract as OpenRouter
+// and hands back a $1 OpenRouter key funded by Mortiphi. TRIALM_CONNECT_URL
+// points it at another site (a local build of it, in tests).
+func TrialURLs() (authURL, api string) {
+	base := "https://mortiphi.com"
+	if v := strings.TrimRight(os.Getenv("TRIALM_CONNECT_URL"), "/"); v != "" {
+		base = v
+	}
+	return base + "/trialm/connect", base + "/api/trialm"
 }

@@ -13,7 +13,16 @@ func (m *Root) tryBody() string {
 	if r, ok := m.row(); ok {
 		name = r.Result.Model.Name
 	}
-	b := "Try " + name + " before you download it\n\n" + m.card("API Simulation to get a feel for the model, speeds and performance on your workflows.\n$0.20–2 of OpenRouter credit · No download") + "\n\nRun it in\n"
+	cost := "Free · $1 of credit when you sign in with GitHub or Google"
+	var credit figure.Figure
+	if m.cfg.Store.Key() != "" && m.cfg.Store.Read("credits.json", &credit) == nil && credit.Unit == "USD" {
+		cost = "$" + fmt.Sprintf("%.2f", credit.V) + " of credit left"
+	}
+	b := "Try " + name + " before you download it\n\n" + m.card("Runs in the cloud at this Mac's speed, in your own agent and project.\n"+cost+" · No download\nYour code goes only to providers that keep no data") + "\n\n"
+	if m.busy && m.pendingTrial {
+		return b + "Finish signing in in your browser. Waiting…"
+	}
+	b += "Run it in\n"
 	for _, id := range core.TrialAgents(m.cfg.Preferences) {
 		name := toolName(id)
 		if id == "generic" {
@@ -43,6 +52,11 @@ func (m *Root) summaryBody() string {
 	cost := "Cost unknown"
 	if r.SpendKnown {
 		cost = "Cost $" + fmt.Sprintf("%.2f", r.SpendUSD)
+	}
+	if m.creditLeft != nil && *m.creditLeft < 0.02 {
+		cost += " · your trial credit is used up; setting it up here is free"
+	} else if m.creditLeft != nil {
+		cost += " · $" + fmt.Sprintf("%.2f", *m.creditLeft) + " of credit left"
 	}
 	b := "Your trial of " + name + "\n\n" + r.Lines() + "\n" + cost + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\nInstall? " + size.String()
 	if m.expanded {

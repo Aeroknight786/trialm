@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/aeroknight786/trialm/internal/calib"
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/hw"
@@ -200,15 +201,41 @@ func manyFileFixture(m *Root) {
 func TestNoSimMeansNoTrial(t *testing.T) {
 	m := fixture(t)
 	m.stack, m.detecting, m.modelIndex = []Screen{Home}, false, 2
-	if !strings.Contains(m.footer(), "t Cloud trial") || !strings.Contains(strip(m.launcher()), "SIM · ") {
+	// Not on this Mac and a private host runs it: Enter tries it first.
+	if !strings.HasPrefix(m.footer(), "⏎ Try in") || !strings.Contains(m.footer(), "s Set up") || !strings.Contains(strip(m.launcher()), "SIM · ") {
 		t.Fatal(m.footer())
 	}
 	m.models[2].Row.Result.Model.OpenRouterID = ""
-	if strings.Contains(m.footer(), "t Cloud trial") || strings.Count(strip(m.launcher()), "SIM · ") != 1 {
+	if !strings.HasPrefix(m.footer(), "⏎ Run in") || strings.Contains(m.footer(), "t Cloud trial") || strings.Count(strip(m.launcher()), "SIM · ") != 1 {
 		t.Fatal(m.footer(), m.launcher())
 	}
 	m.Update(key("t"))
 	if m.screen() != Home || !strings.Contains(m.message, "No SIM") {
 		t.Fatal(m.screen(), m.message)
+	}
+}
+
+// Feedback is sent only when the user asks (f, a note, Enter), and says
+// thanks; what goes is the trial's numbers and the note, never a path.
+func TestFeedbackNoteIsSentOnRequest(t *testing.T) {
+	m := fixture(t)
+	m.stack = []Screen{Summary}
+	var kind string
+	var sent map[string]any
+	m.cfg.SendFeedback = func(_ context.Context, k string, data map[string]any) error { kind, sent = k, data; return nil }
+	m.Update(key("f"))
+	if m.screen() != Note || !strings.Contains(strip(m.View().Content), "Never your code, prompts or file paths") {
+		t.Fatal(m.screen(), m.View().Content)
+	}
+	for _, r := range "first reply was slow" {
+		m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	_, cmd := m.Update(key("enter"))
+	if cmd == nil {
+		t.Fatal("nothing sent")
+	}
+	m.Update(cmd())
+	if kind != "trial" || sent["note"] != "first reply was slow" || sent["model"] != "qwen3.6:35b-a3b" || m.screen() != Summary || m.message != "Thanks, sent." {
+		t.Fatal(kind, sent, m.screen(), m.message)
 	}
 }
