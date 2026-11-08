@@ -128,7 +128,7 @@ func (m *Root) detectBody() string {
 	return b
 }
 func (m *Root) agentsBody() string {
-	b := "Agents\n"
+	b := "Which coding agents do you use? triaLM finds local models for them.\n"
 	for i, a := range m.agents {
 		check := "[ ]"
 		if a.Checked {
