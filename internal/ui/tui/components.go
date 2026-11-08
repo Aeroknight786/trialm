@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"charm.land/lipgloss/v2"
 	"strings"
 
 	"github.com/aeroknight786/trialm/internal/figure"
@@ -28,6 +29,9 @@ func (m *Root) brandLine() string {
 		budget := strings.TrimSuffix(figure.Exact(t.GPUMemBytes/(1<<30), "GB", figure.Measured, "hardware:budget").Number(), ".0")
 		context := toolName(m.cfg.Preferences.Tool) + " · " + machine + " · " + budget + " GB for models"
 		b += m.theme.dim.Render("  " + context)
+	}
+	if pad := min(m.width, 80) - lipgloss.Width(b) - 7; pad > 1 { // the company mark, so the name sticks
+		b += strings.Repeat(" ", pad) + lipgloss.NewStyle().Bold(!m.theme.plain).Render(m.theme.glyph("/mortiϕ"))
 	}
 	return clip(b, m.width)
 }

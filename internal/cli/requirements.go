@@ -97,6 +97,6 @@ func privacyNotice() error {
 	if s.Read("trial-privacy.json", &state) == nil && state.Shown {
 		return nil
 	}
-	fmt.Fprintln(out(), "Trials send this repo to providers that do not store it. Use --playground for a scratch task or --zdr for zero data retention.")
+	fmt.Fprintln(out(), "Trials send this repo to ZDR (zero data retention) providers only. --playground uses a scratch task instead.")
 	return s.Write("trial-privacy.json", map[string]bool{"shown": true})
 }
