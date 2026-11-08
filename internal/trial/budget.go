@@ -15,9 +15,11 @@ import (
 // Budget serializes cloud admissions so simultaneous harness side requests
 // cannot all spend the same remaining balance. Pacing can continue in parallel.
 type Budget struct {
-	Client  upstream.Client
-	Rates   Rates
-	Limit   float64
+	Client upstream.Client
+	Rates  Rates
+	Limit  float64
+	// Credit: the limit is what the key has left, not a chosen cap.
+	Credit  bool
 	gate    chan struct{}
 	mu      sync.Mutex
 	spent   float64
@@ -30,6 +32,9 @@ func NewBudget(c upstream.Client, r Rates, limit float64) *Budget {
 func (b *Budget) Describe() string { return b.Client.Describe() }
 func (b *Budget) Spent() float64   { b.mu.Lock(); defer b.mu.Unlock(); return b.spent }
 func (b *Budget) Error() error {
+	if b.Credit {
+		return fmt.Errorf("your trial credit is used up: set the model up locally (run trialm and press s), or use your own OpenRouter key (trialm key --own)")
+	}
 	return fmt.Errorf("triaLM trial budget reached ($%.2f): trialm try --budget 5 to continue", b.Limit)
 }
 func (b *Budget) Stream(ctx context.Context, req *llm.Request) (<-chan llm.Event, error) {

@@ -22,6 +22,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/catalog"
 	"github.com/aeroknight786/trialm/internal/core"
 	runtime "github.com/aeroknight786/trialm/internal/engine"
+	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/openrouter"
@@ -540,6 +541,15 @@ func cmdServe(args []string, try bool) error {
 				return e
 			}
 			spending = trial.NewBudget(client, rates, *budget)
+			// A trial key has its own limit: stop at what is left of it,
+			// with a message that says so, rather than at a billing error.
+			var left figure.Figure
+			if store.Default().Read("credits.json", &left) == nil && left.Unit == "USD" && left.V < *budget {
+				spending.Limit, spending.Credit = left.V, true
+				if left.V < 0.02 {
+					return &exitError{2, spending.Error().Error()}
+				}
+			}
 			client = spending
 			fidelity = trial.Fidelity(m, res.Quant, endpoint)
 			if e = privacyNotice(); e != nil {

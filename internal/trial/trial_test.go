@@ -326,3 +326,13 @@ func TestGroupTools(t *testing.T) {
 		t.Fatalf("%+v", g)
 	}
 }
+
+// Capped at a trial key's remaining credit, the stop says the credit is
+// used up and how to go on, not "--budget 5" (a $1 key cannot spend $5).
+func TestCreditCapSaysHowToGoOn(t *testing.T) {
+	b := NewBudget(nil, Rates{}, 1)
+	b.Credit = true
+	if e := b.Error().Error(); !strings.Contains(e, "trial credit is used up") || strings.Contains(e, "--budget") {
+		t.Fatal(e)
+	}
+}
