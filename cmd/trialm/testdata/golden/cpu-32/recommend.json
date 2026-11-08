@@ -4,43 +4,44 @@
   "options": [
     {
       "rank": 1,
-      "model": "qwen3.6:35b-a3b",
-      "model_name": "Qwen3.6 35B-A3B",
-      "quant": "IQ4_XS",
+      "model": "lfm2.5:24b-a2b",
+      "model_name": "LFM2.5 24B-A2B",
+      "quant": "Q4_K_M",
       "runtime": "llamacpp",
-      "try_command": "trialm try qwen3.6:35b-a3b --runtime llamacpp --quant IQ4_XS --harness claude-code",
-      "verdict": "slow",
+      "try_command": "trialm try lfm2.5:24b-a2b --runtime llamacpp --harness claude-code",
+      "verdict": "usable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
-        "quant": "IQ4_XS",
-        "download_gb": 17.7305098,
-        "context_tokens": 90112,
-        "memory_gb": 20.2703897,
+        "quant": "Q4_K_M",
+        "download_gb": 14.5262585,
+        "context_tokens": 57344,
+        "memory_gb": 16.3233431,
         "budget_gb": 23.6223201,
         "fit": "fits",
-        "decode_tps": 13.9733328,
-        "decode_tps_deep": 10.0796038,
-        "prefill_tps": 91.9325098,
-        "cold_first_reply_s": 367.641803,
-        "follow_up_ttft_s": 42.6133633,
-        "follow_up_turn_s": 72.3764379,
-        "session_s": 3712.22894,
+        "decode_tps": 22.5375099,
+        "decode_tps_deep": 13.885835,
+        "prefill_tps": 137.94682,
+        "cold_first_reply_s": 169.060174,
+        "follow_up_ttft_s": 27.5171599,
+        "follow_up_turn_s": 49.1219104,
+        "session_s": 2024.98894,
         "cloud_session_s": 120,
         "decode_error_range_pct": 75,
         "prefill_error_range_pct": 80,
         "no_speed_claim": false,
         "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local IQ4_XS is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
         ],
         "assumptions": [
           "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 90112 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"
@@ -48,80 +49,37 @@
     },
     {
       "rank": 2,
-      "model": "qwen3-coder:30b",
-      "model_name": "Qwen3-Coder 30B-A3B",
-      "quant": "IQ4_XS",
-      "runtime": "llamacpp",
-      "try_command": "trialm try qwen3-coder:30b --runtime llamacpp --quant IQ4_XS --harness claude-code",
-      "verdict": "slow",
-      "runtime_installed": false,
-      "prediction": {
-        "runtime": "llamacpp",
-        "tuned": true,
-        "backend": "cpu",
-        "quant": "IQ4_XS",
-        "download_gb": 16.38,
-        "context_tokens": 77824,
-        "memory_gb": 21.0740087,
-        "budget_gb": 23.6223201,
-        "fit": "fits",
-        "decode_tps": 15.166454,
-        "decode_tps_deep": 6.10330539,
-        "prefill_tps": 41.4707542,
-        "cold_first_reply_s": 803.926913,
-        "follow_up_ttft_s": 134.297052,
-        "follow_up_turn_s": 183.450745,
-        "session_s": 9649.89451,
-        "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 65,
-        "no_speed_claim": false,
-        "warnings": [
-          "quality caveat: the trial uses the cloud's BF16/FP8 (provider-dependent) weights; local IQ4_XS is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
-        ],
-        "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
-        ],
-        "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 77824 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
-          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
-        ],
-        "context_note": "tuned for agentic use"
-      }
-    },
-    {
-      "rank": 3,
-      "model": "glm-4.7-flash",
-      "model_name": "GLM-4.7-Flash",
+      "model": "qwen3.6:35b-a3b",
+      "model_name": "Qwen3.6 35B-A3B",
       "quant": "MXFP4",
       "runtime": "llamacpp",
-      "try_command": "trialm try glm-4.7-flash --runtime llamacpp --quant MXFP4 --harness claude-code",
+      "try_command": "trialm try qwen3.6:35b-a3b --runtime llamacpp --quant MXFP4 --harness claude-code",
       "verdict": "slow",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
         "quant": "MXFP4",
-        "download_gb": 16.9684993,
-        "context_tokens": 65536,
-        "memory_gb": 21.1658817,
+        "download_gb": 21.7061447,
+        "context_tokens": 57344,
+        "memory_gb": 23.574936,
         "budget_gb": 23.6223201,
-        "fit": "fits",
-        "decode_tps": 12.4157719,
-        "decode_tps_deep": 6.49840496,
-        "prefill_tps": 18.4237566,
-        "cold_first_reply_s": 1799.58414,
-        "follow_up_ttft_s": 339.520898,
-        "follow_up_turn_s": 385.686073,
-        "session_s": 18739.9372,
+        "fit": "tight",
+        "decode_tps": 12.7324333,
+        "decode_tps_deep": 9.41753099,
+        "prefill_tps": 104.932254,
+        "cold_first_reply_s": 227.798617,
+        "follow_up_ttft_s": 42.6133633,
+        "follow_up_turn_s": 74.4688465,
+        "session_s": 3036.62459,
         "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 65,
+        "decode_error_range_pct": 75,
+        "prefill_error_range_pct": 80,
         "no_speed_claim": false,
         "warnings": [
+          "memory is tight: other apps or a longer context may push it over",
           "quality caveat: the trial uses the cloud's provider-dependent weights; local MXFP4 is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
         ],
         "assumptions": [
@@ -129,7 +87,52 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 3,
+      "model": "qwen3-coder:30b",
+      "model_name": "Qwen3-Coder 30B-A3B",
+      "quant": "Q4_K_M",
+      "runtime": "llamacpp",
+      "try_command": "trialm try qwen3-coder:30b --runtime llamacpp --harness claude-code",
+      "verdict": "slow",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "llamacpp",
+        "tuned": true,
+        "backend": "cpu",
+        "quant": "Q4_K_M",
+        "download_gb": 18.6,
+        "context_tokens": 36864,
+        "memory_gb": 21.1549136,
+        "budget_gb": 23.6223201,
+        "fit": "fits",
+        "decode_tps": 13.3820263,
+        "decode_tps_deep": 6.42103087,
+        "prefill_tps": 56.6733982,
+        "cold_first_reply_s": 396.494269,
+        "follow_up_ttft_s": 114.055886,
+        "follow_up_turn_s": 160.777356,
+        "session_s": 5764.01403,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 60,
+        "prefill_error_range_pct": 65,
+        "no_speed_claim": false,
+        "warnings": [
+          "quality caveat: the trial uses the cloud's BF16/FP8 (provider-dependent) weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+        ],
+        "assumptions": [
+          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
+          "checkpoints=8 (unverified for this version)"
+        ],
+        "tune_steps": [
+          "llama-server -m \u003cmodel.gguf\u003e -c 36864 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts",
           "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
         ],
@@ -138,6 +141,52 @@
     },
     {
       "rank": 4,
+      "model": "glm-4.7-flash",
+      "model_name": "GLM-4.7-Flash",
+      "quant": "Q4_K_M",
+      "runtime": "llamacpp",
+      "try_command": "trialm try glm-4.7-flash --runtime llamacpp --harness claude-code",
+      "verdict": "slow",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "llamacpp",
+        "tuned": true,
+        "backend": "cpu",
+        "quant": "Q4_K_M",
+        "download_gb": 18.3123398,
+        "context_tokens": 40960,
+        "memory_gb": 21.174459,
+        "budget_gb": 23.6223201,
+        "fit": "fits",
+        "decode_tps": 14.367406,
+        "decode_tps_deep": 7.31757189,
+        "prefill_tps": 27.4240563,
+        "cold_first_reply_s": 768.158442,
+        "follow_up_ttft_s": 311.841598,
+        "follow_up_turn_s": 352.838804,
+        "session_s": 12150.9343,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 60,
+        "prefill_error_range_pct": 65,
+        "no_speed_claim": false,
+        "warnings": [
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+        ],
+        "assumptions": [
+          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
+          "checkpoints=8 (unverified for this version)"
+        ],
+        "tune_steps": [
+          "llama-server -m \u003cmodel.gguf\u003e -c 40960 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
+          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 5,
       "model": "gemma4:26b-a4b",
       "model_name": "Gemma 4 26B-A4B",
       "quant": "Q4_K_M",
@@ -146,22 +195,23 @@
       "verdict": "slow",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
         "quant": "Q4_K_M",
         "download_gb": 16.9475417,
-        "context_tokens": 90112,
-        "memory_gb": 19.8522768,
+        "context_tokens": 57344,
+        "memory_gb": 19.1811881,
         "budget_gb": 23.6223201,
         "fit": "fits",
         "decode_tps": 9.44823504,
         "decode_tps_deep": 7.16893033,
-        "prefill_tps": 70.722534,
-        "cold_first_reply_s": 475.022156,
+        "prefill_tps": 78.238242,
+        "cold_first_reply_s": 300.917242,
         "follow_up_ttft_s": 50.8100859,
         "follow_up_turn_s": 92.6573331,
-        "session_s": 4610.56421,
+        "session_s": 3819.09419,
         "cloud_session_s": 120,
         "decode_error_range_pct": 60,
         "prefill_error_range_pct": 65,
@@ -174,57 +224,12 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 90112 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts"
-        ],
-        "context_note": "tuned for agentic use"
-      }
-    },
-    {
-      "rank": 5,
-      "model": "devstral-small-2:24b",
-      "model_name": "Devstral Small 2 24B",
-      "quant": "Q4_K_M",
-      "runtime": "llamacpp",
-      "try_command": "trialm try devstral-small-2:24b --runtime llamacpp --harness claude-code",
-      "verdict": "slow",
-      "runtime_installed": false,
-      "prediction": {
-        "runtime": "llamacpp",
-        "tuned": true,
-        "backend": "cpu",
-        "quant": "Q4_K_M",
-        "download_gb": 14.3344468,
-        "context_tokens": 65536,
-        "memory_gb": 20.9243394,
-        "budget_gb": 23.6223201,
-        "fit": "fits",
-        "decode_tps": 2.49551505,
-        "decode_tps_deep": 1.92971341,
-        "prefill_tps": 13.9584399,
-        "cold_first_reply_s": 2371.87653,
-        "follow_up_ttft_s": 240.781114,
-        "follow_up_turn_s": 396.244614,
-        "session_s": 18556.7454,
-        "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 65,
-        "no_speed_claim": false,
-        "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
-        ],
-        "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
-        ],
-        "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
-          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
         ],
         "context_note": "tuned for agentic use"
       }
     }
   ],
-  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score"
+  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last"
 }

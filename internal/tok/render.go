@@ -79,6 +79,9 @@ func RenderAssistantBody(s *Seq, reasoning, content string, calls []llm.ToolCall
 	}
 }
 
+// ToolPieces is how much of a rendered prompt one tool definition takes.
+func ToolPieces(t llm.Tool) int { return len(Pieces(renderTool(t))) + len(Pieces("\n")) }
+
 func renderTool(t llm.Tool) string {
 	var b strings.Builder
 	b.WriteString(t.Name)
@@ -89,13 +92,4 @@ func renderTool(t llm.Tool) string {
 		b.WriteString(llm.CanonicalJSON(string(t.Parameters)))
 	}
 	return b.String()
-}
-
-// ToolsJSONSize returns the estimated tokens spent on tool definitions.
-func ToolsJSONSize(req *llm.Request) int {
-	n := 0
-	for _, t := range req.Tools {
-		n += Count(renderTool(t))
-	}
-	return n
 }

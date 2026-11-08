@@ -39,6 +39,8 @@ type OpenAICompat struct {
 	// so its decode time can be simulated. Sending reasoning parameters to
 	// other models can make OpenRouter find no provider.
 	Reasoning bool
+	// Ollama uses native /api/chat so num_ctx and format reach the runtime.
+	Ollama bool
 	// IdleTimeout ends a stream that sends nothing for this long
 	// (default 120 s), so a stalled provider can't block the device.
 	IdleTimeout time.Duration
@@ -64,6 +66,13 @@ func (c *OpenAICompat) BuildBody(req *llm.Request) map[string]any {
 		om := map[string]any{"role": m.Role}
 		switch m.Role {
 		case llm.RoleAssistant:
+			if m.Reasoning != "" {
+				key := "reasoning_content"
+				if c.isOpenRouter() {
+					key = "reasoning"
+				}
+				om[key] = m.Reasoning
+			}
 			if m.Content != "" || len(m.ToolCalls) == 0 {
 				om["content"] = m.Content
 			} else {
@@ -110,6 +119,9 @@ func (c *OpenAICompat) BuildBody(req *llm.Request) map[string]any {
 		if len(req.ToolChoice) > 0 {
 			body["tool_choice"] = req.ToolChoice
 		}
+	}
+	if len(req.ResponseFormat) > 0 {
+		body["response_format"] = req.ResponseFormat
 	}
 	if req.MaxTokens > 0 {
 		body["max_tokens"] = req.MaxTokens
@@ -208,6 +220,9 @@ func stripTrialmKeys(raw json.RawMessage) json.RawMessage {
 
 // Stream implements Client.
 func (c *OpenAICompat) Stream(ctx context.Context, req *llm.Request) (<-chan llm.Event, error) {
+	if c.Ollama {
+		return c.streamOllama(ctx, req)
+	}
 	b, err := json.Marshal(c.BuildBody(req))
 	if err != nil {
 		return nil, err
@@ -254,6 +269,16 @@ func (c *OpenAICompat) Stream(ctx context.Context, req *llm.Request) (<-chan llm
 	return out, nil
 }
 
+type apiError struct {
+	Error struct {
+		Message  string
+		Metadata struct {
+			Raw      string
+			Provider string `json:"provider_name"`
+		}
+	}
+}
+
 // HTTPError is a non-200 upstream response.
 type HTTPError struct {
 	Status int
@@ -262,13 +287,13 @@ type HTTPError struct {
 
 func (e *HTTPError) Error() string {
 	msg := e.Body
-	var parsed struct {
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}
+	var parsed, raw apiError
 	if json.Unmarshal([]byte(e.Body), &parsed) == nil && parsed.Error.Message != "" {
 		msg = parsed.Error.Message
+		// OpenRouter's "Provider returned error" keeps the provider's reason in metadata.raw.
+		if m := parsed.Error.Metadata; json.Unmarshal([]byte(m.Raw), &raw) == nil && raw.Error.Message != "" {
+			msg += " (" + strings.TrimPrefix(m.Provider+": ", ": ") + raw.Error.Message + ")"
+		}
 	}
 	return fmt.Sprintf("upstream returned HTTP %d: %s", e.Status, msg)
 }
@@ -291,15 +316,19 @@ type chunk struct {
 		FinishReason *string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
-		PromptTokens        int `json:"prompt_tokens"`
-		CompletionTokens    int `json:"completion_tokens"`
+		PromptTokens        int      `json:"prompt_tokens"`
+		CompletionTokens    int      `json:"completion_tokens"`
+		Cost                *float64 `json:"cost"` // OpenRouter: the request's actual charge in USD
 		PromptTokensDetails *struct {
-			CachedTokens int `json:"cached_tokens"`
+			CachedTokens *int `json:"cached_tokens"`
 		} `json:"prompt_tokens_details"`
 		CompletionTokensDetails *struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
 		} `json:"completion_tokens_details"`
 	} `json:"usage"`
+	Timings *struct {
+		CacheN *int `json:"cache_n"`
+	} `json:"timings"`
 	Error *struct {
 		Message string `json:"message"`
 	} `json:"error"`
@@ -380,14 +409,25 @@ func parseSSE(ctx context.Context, r io.Reader, out chan<- llm.Event, onLine fun
 			}
 		}
 		if ch.Usage != nil {
-			u := llm.Usage{PromptTokens: ch.Usage.PromptTokens, CompletionTokens: ch.Usage.CompletionTokens}
-			if ch.Usage.PromptTokensDetails != nil {
-				u.CachedPromptTokens = ch.Usage.PromptTokensDetails.CachedTokens
+			u := llm.Usage{PromptTokens: ch.Usage.PromptTokens, CompletionTokens: ch.Usage.CompletionTokens, CostUSD: ch.Usage.Cost}
+			if usage != nil {
+				u.CachedPromptTokens, u.CacheKnown = usage.CachedPromptTokens, usage.CacheKnown
+			}
+			if ch.Usage.PromptTokensDetails != nil && ch.Usage.PromptTokensDetails.CachedTokens != nil {
+				u.CachedPromptTokens = *ch.Usage.PromptTokensDetails.CachedTokens
+				u.CacheKnown = true
 			}
 			if ch.Usage.CompletionTokensDetails != nil {
 				u.ReasoningTokens = ch.Usage.CompletionTokensDetails.ReasoningTokens
 			}
 			usage = &u
+		}
+		if ch.Timings != nil && ch.Timings.CacheN != nil {
+			if usage == nil {
+				usage = &llm.Usage{}
+			}
+			usage.CachedPromptTokens = *ch.Timings.CacheN
+			usage.CacheKnown = true
 		}
 	}
 	if stalled != nil && stalled() {

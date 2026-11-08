@@ -12,6 +12,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
@@ -24,16 +25,16 @@
         "decode_tps": 61.1931915,
         "decode_tps_deep": 55.682159,
         "prefill_tps": 2171.72439,
-        "cold_first_reply_s": 8.51024248,
+        "cold_first_reply_s": 13.6921265,
         "follow_up_ttft_s": 1.53246985,
         "follow_up_turn_s": 6.92019197,
-        "session_s": 294.771869,
+        "session_s": 299.963489,
         "cloud_session_s": 120,
         "decode_error_range_pct": 30,
         "prefill_error_range_pct": 50,
         "no_speed_claim": false,
         "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+          "trial stand-in: no cloud provider hosts this exact model, so trials use Gemma 4 26B-A4B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
         ],
         "assumptions": [
           "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
@@ -56,6 +57,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
@@ -68,10 +70,10 @@
         "decode_tps": 86.9615804,
         "decode_tps_deep": 74.9465205,
         "prefill_tps": 3578.35648,
-        "cold_first_reply_s": 6.29940606,
+        "cold_first_reply_s": 9.91315936,
         "follow_up_ttft_s": 0.886780724,
         "follow_up_turn_s": 4.889635,
-        "session_s": 214.277376,
+        "session_s": 217.910602,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 65,
@@ -100,6 +102,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
@@ -112,10 +115,10 @@
         "decode_tps": 95.2614906,
         "decode_tps_deep": 69.3726919,
         "prefill_tps": 3208.74697,
-        "cold_first_reply_s": 6.28455591,
+        "cold_first_reply_s": 9.79612318,
         "follow_up_ttft_s": 1.53166419,
         "follow_up_turn_s": 5.85613239,
-        "session_s": 281.064701,
+        "session_s": 284.617648,
         "cloud_session_s": 120,
         "decode_error_range_pct": 30,
         "prefill_error_range_pct": 50,
@@ -145,6 +148,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
@@ -157,16 +161,61 @@
         "decode_tps": 151.715595,
         "decode_tps_deep": 118.556502,
         "prefill_tps": 6434.69434,
-        "cold_first_reply_s": 4.00221088,
+        "cold_first_reply_s": 6.14845699,
         "follow_up_ttft_s": 0.576654807,
         "follow_up_turn_s": 3.10709385,
-        "session_s": 142.461076,
+        "session_s": 144.626795,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 65,
         "no_speed_claim": false,
         "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+          "trial stand-in: no cloud provider hosts this exact model, so trials use Qwen3.5 9B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
+        ],
+        "assumptions": [
+          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
+          "checkpoints=8 (unverified for this version)"
+        ],
+        "tune_steps": [
+          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 5,
+      "model": "lfm2.5:8b-a1b",
+      "model_name": "LFM2.5 8B-A1B",
+      "quant": "Q4_K_M",
+      "runtime": "llamacpp",
+      "try_command": "trialm try lfm2.5:8b-a1b --runtime llamacpp --harness codex",
+      "verdict": "comfortable",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "llamacpp",
+        "tuned": true,
+        "backend": "cuda",
+        "quant": "Q4_K_M",
+        "download_gb": 5.15556477,
+        "context_tokens": 65536,
+        "memory_gb": 6.78819207,
+        "budget_gb": 12.4554052,
+        "fit": "fits",
+        "decode_tps": 320.220858,
+        "decode_tps_deep": 262.180693,
+        "prefill_tps": 8786.94287,
+        "cold_first_reply_s": 5.58933755,
+        "follow_up_ttft_s": 0.355064046,
+        "follow_up_turn_s": 1.49931306,
+        "session_s": 70.5506762,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 45,
+        "prefill_error_range_pct": 65,
+        "no_speed_claim": false,
+        "warnings": [
+          "estimate only: no private cloud host runs this model, so there is no trial"
         ],
         "assumptions": [
           "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
@@ -180,5 +229,5 @@
       }
     }
   ],
-  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score"
+  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last"
 }

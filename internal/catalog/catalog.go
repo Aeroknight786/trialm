@@ -44,6 +44,9 @@ type Quant struct {
 	// from Name (e.g. "UD-Q4_K_M", "MXFP4_MOE", "Q4_K"); used as
 	// hf.co/<repo>:<tag> by Ollama, llama.cpp and LM Studio.
 	FileTag string `json:",omitempty"`
+	// Repo holds this file when it differs per quant: mlx-community
+	// publishes one repository per bit width.
+	Repo string `json:",omitempty"`
 }
 
 // HFTag returns the tag that selects the quant's file on Hugging Face.
@@ -54,7 +57,9 @@ func (q Quant) HFTag() string {
 	return q.Name
 }
 
-var fileTagRe = regexp.MustCompile(`(?i)((?:UD-)?(?:I?Q\d[_A-Z0-9]*|MXFP4(?:_MOE)?|BF16|F16|F32))$`)
+var fileTagRe = regexp.MustCompile(`(?i)((?:UD-)?(?:TQ\d_\d|I?Q\d[_A-Z0-9]*|MXFP4(?:_MOE)?|BF16|F16|F32))$`)
+
+var shardSuffixRe = regexp.MustCompile(`-\d{5}-OF-\d{5}$`)
 
 // FileTag derives the quant tag from a GGUF file name such as
 // "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf" → "UD-Q4_K_M" ("" if none).
@@ -63,7 +68,13 @@ func FileTag(filename string) string {
 	if i := strings.LastIndex(base, "/"); i >= 0 {
 		base = base[i+1:]
 	}
-	base = strings.TrimSuffix(base, ".gguf")
+	base = strings.TrimSuffix(strings.ToUpper(base), ".GGUF")
+	for _, prefix := range []string{"MMPROJ-", "MTP-", "DFLASH-", "EAGLE", "IMATRIX"} {
+		if strings.HasPrefix(base, prefix) {
+			return ""
+		}
+	}
+	base = shardSuffixRe.ReplaceAllString(base, "")
 	if m := fileTagRe.FindStringSubmatch(base); m != nil {
 		return m[1]
 	}
@@ -131,6 +142,9 @@ type Model struct {
 	NativeCtx int
 	Tools     bool
 	Thinking  bool
+	// NotForCoding is set when the model's maker does not recommend it for
+	// coding: it is listed, but ranked after every other model for agents.
+	NotForCoding bool `json:",omitempty"`
 
 	// Quants, default first.
 	Quants []Quant
@@ -184,7 +198,7 @@ var models = []Model{
 		NativeCtx: 131072, Tools: true, Thinking: true,
 		Quants: []Quant{
 			{Name: "MXFP4", Format: "gguf", FileBytes: 12_101_000_000, ReadBytesPerToken: 2_570_000_000},
-			{Name: "MLX-MXFP4", Format: "mlx", FileBytes: 12_100_000_000, ReadBytesPerToken: 2_570_000_000, Estimated: true},
+			{Name: "MLX-MXFP4", Format: "mlx", FileBytes: 12_076_207_568, ReadBytesPerToken: 2_570_000_000, Repo: "mlx-community/gpt-oss-20b-MXFP4-Q8"},
 		},
 		OpenRouterID: "openai/gpt-oss-20b", CloudPrecision: "MXFP4 (native release format)", QuantMatchesCloud: true,
 		HFGGUFRepo: "ggml-org/gpt-oss-20b-GGUF",
@@ -235,7 +249,7 @@ var models = []Model{
 		Layers: 36, FullAttnLayers: 36, KVHeads: 8, HeadDim: 128, QHeads: 32,
 		NativeCtx: 40960, Tools: true, Thinking: true,
 		Quants:       []Quant{gq("Q4_K_M", 5.03), gq("Q8_0", 8.71), est("MLX-4bit", 8.19)},
-		OpenRouterID: "qwen/qwen3-8b", CloudPrecision: "BF16/FP8 (provider-dependent)", HFGGUFRepo: "Qwen/Qwen3-8B-GGUF",
+		OpenRouterID: "qwen/qwen3-14b", TrialStandIn: "Qwen3 14B, the same family one size up, so trial answers are a little better than the local model", CloudPrecision: "BF16/FP8 (provider-dependent)", HFGGUFRepo: "Qwen/Qwen3-8B-GGUF",
 	},
 	{
 		ID: "llama3.1-8b", Name: "Llama 3.1 8B Instruct", OllamaTag: "llama3.1:8b", Aliases: []string{"meta-llama/llama-3.1-8b-instruct", "llama3.1"},
@@ -279,7 +293,7 @@ var models = []Model{
 		Layers: 40, FullAttnLayers: 40, KVHeads: 8, HeadDim: 128, QHeads: 32,
 		NativeCtx: 131072, Tools: true,
 		Quants:       []Quant{gq("Q4_K_M", 14.3), gq("Q8_0", 25.1), est("MLX-4bit", 23.57)},
-		OpenRouterID: "mistralai/devstral-small", CloudPrecision: "BF16/FP8 (provider-dependent)",
+		OpenRouterID: "mistralai/devstral-2512", TrialStandIn: "Devstral 2, the larger model of the same family, so trial answers are better than the local model", CloudPrecision: "BF16/FP8 (provider-dependent)",
 		HFGGUFRepo: "unsloth/Devstral-Small-2507-GGUF",
 	},
 	{
@@ -297,7 +311,7 @@ var models = []Model{
 		Layers: 28, FullAttnLayers: 28, KVHeads: 4, HeadDim: 128, QHeads: 28,
 		NativeCtx: 32768, Tools: true,
 		Quants:       []Quant{gq("Q4_K_M", 4.68), gq("Q8_0", 8.1), est("MLX-4bit", 7.62)},
-		OpenRouterID: "qwen/qwen2.5-coder-7b-instruct", CloudPrecision: "BF16/FP8 (provider-dependent)",
+		OpenRouterID: "qwen/qwen3-coder-30b-a3b-instruct", TrialStandIn: "Qwen3 Coder 30B-A3B, a newer and larger coding model, so trial answers are better than the local model", CloudPrecision: "BF16/FP8 (provider-dependent)",
 		HFGGUFRepo: "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
 	},
 }
@@ -313,9 +327,33 @@ func init() {
 	}
 	for _, m := range gen {
 		if !have[m.ID] {
+			m.Quants = append(m.Quants, mlxFiles[m.ID]...)
 			models = append(models, m)
 		}
 	}
+}
+
+// mlxFiles adds MLX files to generated models (the generator writes GGUF
+// only). Sizes are each repository's safetensors total, vision weights
+// included.
+var mlxFiles = map[string][]Quant{
+	"qwen3.5-9b": {
+		{Name: "MLX-4bit", Format: "mlx", FileBytes: 5_950_221_072, Repo: "mlx-community/Qwen3.5-9B-MLX-4bit"},
+		{Name: "MLX-8bit", Format: "mlx", FileBytes: 10_426_592_423, Repo: "mlx-community/Qwen3.5-9B-MLX-8bit"},
+	},
+	"qwen3.5-4b": {
+		{Name: "MLX-4bit", Format: "mlx", FileBytes: 3_034_300_695, Repo: "mlx-community/Qwen3.5-4B-MLX-4bit"},
+		{Name: "MLX-8bit", Format: "mlx", FileBytes: 5_136_696_107, Repo: "mlx-community/Qwen3.5-4B-MLX-8bit"},
+	},
+	"qwen3.6-35b-a3b": {{Name: "MLX-4bit", Format: "mlx", FileBytes: 20_402_204_271, Repo: "mlx-community/Qwen3.6-35B-A3B-4bit"}},
+}
+
+// MLXRepo is the repository holding an MLX file, "" when none is known.
+func (m Model) MLXRepo(q Quant) string {
+	if q.Repo != "" {
+		return q.Repo
+	}
+	return m.HFMLXRepo
 }
 
 // All returns catalog models sorted by total size.
@@ -348,7 +386,7 @@ func Lookup(name string) (Model, bool) {
 }
 
 func matches(m Model, n string) bool {
-	if n == strings.ToLower(m.ID) || n == strings.ToLower(m.OllamaTag) || n == strings.ToLower(m.OpenRouterID) {
+	if n == strings.ToLower(m.ID) || n == strings.ToLower(m.OllamaTag) || (m.OpenRouterID != "" && n == strings.ToLower(m.OpenRouterID)) {
 		return true
 	}
 	for _, a := range m.Aliases {

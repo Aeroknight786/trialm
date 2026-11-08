@@ -12,22 +12,23 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
         "quant": "Q4_K_M",
         "download_gb": 22.134529,
-        "context_tokens": 90112,
-        "memory_gb": 24.8891573,
+        "context_tokens": 57344,
+        "memory_gb": 24.2180686,
         "budget_gb": 25.340307,
         "fit": "tight",
         "decode_tps": 207.411286,
         "decode_tps_deep": 159.790164,
-        "prefill_tps": 4430.27951,
-        "cold_first_reply_s": 17.8083632,
+        "prefill_tps": 4967.18721,
+        "cold_first_reply_s": 16.0062168,
         "follow_up_ttft_s": 0.843470319,
         "follow_up_turn_s": 2.72093256,
-        "session_s": 137.849562,
+        "session_s": 119.574894,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 65,
@@ -41,7 +42,7 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 90112 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"
@@ -57,22 +58,23 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
         "quant": "Q4_K_M",
         "download_gb": 18.6,
-        "context_tokens": 61440,
-        "memory_gb": 22.653119,
+        "context_tokens": 57344,
+        "memory_gb": 22.4392095,
         "budget_gb": 25.340307,
         "fit": "fits",
         "decode_tps": 194.9451,
         "decode_tps_deep": 97.8611412,
-        "prefill_tps": 2144.68168,
-        "cold_first_reply_s": 24.3355359,
+        "prefill_tps": 2864.03086,
+        "cold_first_reply_s": 18.0980725,
         "follow_up_ttft_s": 2.50569897,
         "follow_up_turn_s": 5.57126715,
-        "session_s": 256.682958,
+        "session_s": 224.730796,
         "cloud_session_s": 120,
         "decode_error_range_pct": 30,
         "prefill_error_range_pct": 50,
@@ -85,7 +87,7 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 61440 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts",
           "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
         ],
@@ -102,22 +104,23 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
         "quant": "Q4_K_M",
         "download_gb": 18.3123398,
-        "context_tokens": 65536,
-        "memory_gb": 22.7244706,
+        "context_tokens": 57344,
+        "memory_gb": 22.2793828,
         "budget_gb": 25.340307,
         "fit": "fits",
         "decode_tps": 221.509744,
         "decode_tps_deep": 120.100115,
-        "prefill_tps": 982.637337,
-        "cold_first_reply_s": 42.4151696,
+        "prefill_tps": 1438.52686,
+        "cold_first_reply_s": 24.5588034,
         "follow_up_ttft_s": 6.23447635,
         "follow_up_turn_s": 8.73239236,
-        "session_s": 421.440223,
+        "session_s": 344.730282,
         "cloud_session_s": 120,
         "decode_error_range_pct": 30,
         "prefill_error_range_pct": 50,
@@ -130,7 +133,7 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts",
           "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
         ],
@@ -147,22 +150,23 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
         "quant": "Q4_K_M",
         "download_gb": 18.9738705,
-        "context_tokens": 69632,
-        "memory_gb": 22.6905482,
+        "context_tokens": 36864,
+        "memory_gb": 22.6821596,
         "budget_gb": 25.340307,
         "fit": "fits",
-        "decode_tps": 35.6082206,
-        "decode_tps_deep": 32.7588736,
-        "prefill_tps": 1126.02983,
-        "cold_first_reply_s": 38.4258211,
-        "follow_up_ttft_s": 2.89020225,
-        "follow_up_turn_s": 12.0480263,
-        "session_s": 522.349934,
+        "decode_tps": 35.5785621,
+        "decode_tps_deep": 31.3369835,
+        "prefill_tps": 1205.51611,
+        "cold_first_reply_s": 34.686653,
+        "follow_up_ttft_s": 2.70696794,
+        "follow_up_turn_s": 12.2803208,
+        "session_s": 498.591471,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 65,
@@ -175,9 +179,8 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 69632 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
-          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
+          "llama-server -m \u003cmodel.gguf\u003e -c 36864 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"
       }
@@ -192,22 +195,23 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cuda",
         "quant": "Q4_K_M",
         "download_gb": 16.9475417,
-        "context_tokens": 90112,
-        "memory_gb": 20.0670251,
+        "context_tokens": 57344,
+        "memory_gb": 19.3959365,
         "budget_gb": 25.340307,
         "fit": "fits",
         "decode_tps": 156.300306,
         "decode_tps_deep": 122.745321,
-        "prefill_tps": 3409.01547,
-        "cold_first_reply_s": 17.9669313,
+        "prefill_tps": 3720.96069,
+        "cold_first_reply_s": 15.846577,
         "follow_up_ttft_s": 1.01326683,
         "follow_up_turn_s": 3.45735185,
-        "session_s": 166.728482,
+        "session_s": 148.135606,
         "cloud_session_s": 120,
         "decode_error_range_pct": 30,
         "prefill_error_range_pct": 50,
@@ -220,12 +224,12 @@
           "checkpoints=8 (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 90112 -fa on --jinja",
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"
       }
     }
   ],
-  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score"
+  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last"
 }

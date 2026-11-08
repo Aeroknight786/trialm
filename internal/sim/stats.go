@@ -2,9 +2,13 @@ package sim
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aeroknight786/trialm/internal/llm"
+	"github.com/aeroknight786/trialm/internal/tok"
 )
 
 // Record is one simulated request.
@@ -33,6 +37,59 @@ type Record struct {
 	CacheMiss     string    `json:"cache_miss,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Cancelled     bool      `json:"cancelled,omitempty"`
+	// Tools sizes an opening request's tool definitions per server.
+	Tools []ToolGroup `json:"tools,omitempty"`
+}
+
+// ToolGroup is the tool definitions one MCP server or plugin adds to a
+// prompt. Only group names and counts are kept, never the definitions.
+type ToolGroup struct {
+	Name   string `json:"name"`
+	Tools  int    `json:"tools"`
+	Tokens int    `json:"tokens"`
+}
+
+// GroupTools groups tools by the namespace before the last "__" and
+// converts rendered pieces to tokens with ratio, largest group first.
+func GroupTools(tools []llm.Tool, ratio float64) []ToolGroup {
+	at := map[string]int{}
+	var out []ToolGroup
+	for _, t := range tools {
+		name := "built-in"
+		if i := strings.LastIndex(t.Name, "__"); i > 0 {
+			name = strings.TrimPrefix(t.Name[:i], "mcp__")
+		}
+		j, ok := at[name]
+		if !ok {
+			j, at[name] = len(out), len(out)
+			out = append(out, ToolGroup{Name: name})
+		}
+		out[j].Tools++
+		out[j].Tokens += int(float64(tok.ToolPieces(t))*ratio + 0.5)
+	}
+	sort.SliceStable(out, func(a, b int) bool { return out[a].Tokens > out[b].Tokens })
+	return out
+}
+
+// ToolTokens totals the groups.
+func ToolTokens(groups []ToolGroup) (n int) {
+	for _, g := range groups {
+		n += g.Tokens
+	}
+	return n
+}
+
+// ToolsLine names the largest groups: "jcodemunch 21k (82 tools) · 3 more 4.1k".
+func ToolsLine(groups []ToolGroup, top int) string {
+	var parts []string
+	for i, g := range groups {
+		if i == top {
+			parts = append(parts, fmt.Sprintf("%d more %s", len(groups)-top, Kilo(ToolTokens(groups[top:]))))
+			break
+		}
+		parts = append(parts, fmt.Sprintf("%s %s (%d tools)", g.Name, Kilo(g.Tokens), g.Tools))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // Stats accumulates the session.

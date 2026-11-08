@@ -12,6 +12,7 @@
       "verdict": "usable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
@@ -24,10 +25,10 @@
         "decode_tps": 13.9733328,
         "decode_tps_deep": 11.4311084,
         "prefill_tps": 119.193879,
-        "cold_first_reply_s": 84.1759801,
+        "cold_first_reply_s": 107.088629,
         "follow_up_ttft_s": 32.2473121,
         "follow_up_turn_s": 58.4914864,
-        "session_s": 2778.94739,
+        "session_s": 2802.02815,
         "cloud_session_s": 120,
         "decode_error_range_pct": 75,
         "prefill_error_range_pct": 80,
@@ -48,6 +49,51 @@
     },
     {
       "rank": 2,
+      "model": "lfm2.5:24b-a2b",
+      "model_name": "LFM2.5 24B-A2B",
+      "quant": "Q4_K_M",
+      "runtime": "llamacpp",
+      "try_command": "trialm try lfm2.5:24b-a2b --runtime llamacpp --harness codex",
+      "verdict": "usable",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "llamacpp",
+        "tuned": true,
+        "backend": "cpu",
+        "quant": "Q4_K_M",
+        "download_gb": 14.5262585,
+        "context_tokens": 65536,
+        "memory_gb": 16.4911152,
+        "budget_gb": 23.6223201,
+        "fit": "fits",
+        "decode_tps": 22.5375099,
+        "decode_tps_deep": 16.5875531,
+        "prefill_tps": 149.72217,
+        "cold_first_reply_s": 82.2527089,
+        "follow_up_ttft_s": 22.3341343,
+        "follow_up_turn_s": 40.4199844,
+        "session_s": 1917.9495,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 75,
+        "prefill_error_range_pct": 80,
+        "no_speed_claim": false,
+        "warnings": [
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+        ],
+        "assumptions": [
+          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
+          "checkpoints=8 (unverified for this version)"
+        ],
+        "tune_steps": [
+          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 3,
       "model": "qwen3-coder:30b",
       "model_name": "Qwen3-Coder 30B-A3B",
       "quant": "IQ4_XS",
@@ -56,6 +102,7 @@
       "verdict": "slow",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
@@ -68,10 +115,10 @@
         "decode_tps": 15.166454,
         "decode_tps_deep": 8.17640963,
         "prefill_tps": 82.1578751,
-        "cold_first_reply_s": 117.680755,
+        "cold_first_reply_s": 142.760046,
         "follow_up_ttft_s": 84.5400065,
         "follow_up_turn_s": 121.230928,
-        "session_s": 6699.24209,
+        "session_s": 6724.91679,
         "cloud_session_s": 120,
         "decode_error_range_pct": 60,
         "prefill_error_range_pct": 65,
@@ -92,7 +139,7 @@
       }
     },
     {
-      "rank": 3,
+      "rank": 4,
       "model": "glm-4.7-flash",
       "model_name": "GLM-4.7-Flash",
       "quant": "MXFP4",
@@ -101,6 +148,7 @@
       "verdict": "slow",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
@@ -113,10 +161,10 @@
         "decode_tps": 12.4157719,
         "decode_tps_deep": 8.14558231,
         "prefill_tps": 46.74765,
-        "cold_first_reply_s": 200.904196,
+        "cold_first_reply_s": 229.004985,
         "follow_up_ttft_s": 202.494659,
         "follow_up_turn_s": 239.324439,
-        "session_s": 13895.688,
+        "session_s": 13924.2348,
         "cloud_session_s": 120,
         "decode_error_range_pct": 60,
         "prefill_error_range_pct": 65,
@@ -137,7 +185,7 @@
       }
     },
     {
-      "rank": 4,
+      "rank": 5,
       "model": "gemma4:26b-a4b",
       "model_name": "Gemma 4 26B-A4B",
       "quant": "Q4_K_M",
@@ -146,6 +194,7 @@
       "verdict": "slow",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "cpu",
@@ -158,10 +207,10 @@
         "decode_tps": 9.44823504,
         "decode_tps_deep": 7.82710512,
         "prefill_tps": 86.1475215,
-        "cold_first_reply_s": 112.867795,
+        "cold_first_reply_s": 147.824336,
         "follow_up_ttft_s": 40.4440348,
         "follow_up_turn_s": 78.7723816,
-        "session_s": 3598.59412,
+        "session_s": 3633.71877,
         "cloud_session_s": 120,
         "decode_error_range_pct": 60,
         "prefill_error_range_pct": 65,
@@ -179,52 +228,7 @@
         ],
         "context_note": "tuned for agentic use"
       }
-    },
-    {
-      "rank": 5,
-      "model": "devstral-small-2:24b",
-      "model_name": "Devstral Small 2 24B",
-      "quant": "Q4_K_M",
-      "runtime": "llamacpp",
-      "try_command": "trialm try devstral-small-2:24b --runtime llamacpp --harness codex",
-      "verdict": "slow",
-      "runtime_installed": false,
-      "prediction": {
-        "runtime": "llamacpp",
-        "tuned": true,
-        "backend": "cpu",
-        "quant": "Q4_K_M",
-        "download_gb": 14.3344468,
-        "context_tokens": 65536,
-        "memory_gb": 20.9243394,
-        "budget_gb": 23.6223201,
-        "fit": "fits",
-        "decode_tps": 2.49551505,
-        "decode_tps_deep": 2.13510711,
-        "prefill_tps": 16.2101261,
-        "cold_first_reply_s": 562.864168,
-        "follow_up_ttft_s": 199.31691,
-        "follow_up_turn_s": 339.825083,
-        "session_s": 15496.6299,
-        "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 65,
-        "no_speed_claim": false,
-        "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
-        ],
-        "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
-        ],
-        "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
-          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
-        ],
-        "context_note": "tuned for agentic use"
-      }
     }
   ],
-  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score"
+  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last"
 }

@@ -12,6 +12,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "metal",
@@ -21,13 +22,13 @@
         "memory_gb": 15.2477188,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 48.9558946,
-        "decode_tps_deep": 40.2980968,
+        "decode_tps": 48.2761496,
+        "decode_tps_deep": 24.7849857,
         "prefill_tps": 1468.91846,
-        "cold_first_reply_s": 10.2909871,
+        "cold_first_reply_s": 18.3580975,
         "follow_up_ttft_s": 3.69063116,
-        "follow_up_turn_s": 11.1351515,
-        "session_s": 527.924949,
+        "follow_up_turn_s": 15.7947334,
+        "session_s": 818.201928,
         "cloud_session_s": 120,
         "decode_error_range_pct": 60,
         "prefill_error_range_pct": 70,
@@ -56,6 +57,7 @@
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "metal",
@@ -65,13 +67,13 @@
         "memory_gb": 15.1728425,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 32.1577056,
-        "decode_tps_deep": 29.1478299,
+        "decode_tps": 29.1499064,
+        "decode_tps_deep": 20.5461206,
         "prefill_tps": 989.2536,
-        "cold_first_reply_s": 13.3499095,
+        "cold_first_reply_s": 25.7854293,
         "follow_up_ttft_s": 4.54248876,
-        "follow_up_turn_s": 14.8348502,
-        "session_s": 661.740181,
+        "follow_up_turn_s": 19.1437853,
+        "session_s": 895.607453,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 55,
@@ -96,42 +98,39 @@
       "model": "gpt-oss:20b",
       "model_name": "gpt-oss 20B",
       "quant": "MLX-MXFP4",
-      "runtime": "lmstudio-mlx",
-      "try_command": "trialm try gpt-oss:20b --runtime lmstudio-mlx --quant MLX-MXFP4 --harness codex",
+      "runtime": "mlx-lm",
+      "try_command": "trialm try gpt-oss:20b --runtime mlx-lm --quant MLX-MXFP4 --harness codex",
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
-        "runtime": "lmstudio-mlx",
+        "kind": "simulated",
+        "runtime": "mlx-lm",
         "tuned": true,
         "backend": "mlx",
         "quant": "MLX-MXFP4",
-        "download_gb": 12.1,
+        "download_gb": 12.0762076,
         "context_tokens": 65536,
-        "memory_gb": 14.350831,
+        "memory_gb": 14.3270385,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 43.850212,
-        "decode_tps_deep": 35.8254185,
+        "decode_tps": 46.9898244,
+        "decode_tps_deep": 24.2995315,
         "prefill_tps": 1221.22761,
-        "cold_first_reply_s": 11.3140362,
+        "cold_first_reply_s": 19.5667189,
         "follow_up_ttft_s": 4.38583012,
-        "follow_up_turn_s": 12.7597728,
-        "session_s": 606.633709,
+        "follow_up_turn_s": 16.7317471,
+        "session_s": 867.11994,
         "cloud_session_s": 120,
         "decode_error_range_pct": 55,
         "prefill_error_range_pct": 65,
         "no_speed_claim": false,
-        "warnings": [
-          "LM Studio (MLX engine) uses MLX files; using MLX-MXFP4 instead of MXFP4"
-        ],
+        "warnings": null,
         "assumptions": [
-          "keep_alive_s=3600 (unverified for this version)",
-          "overflow=truncate_middle (unverified for this version)",
-          "slots=1 (unverified for this version)"
+          "overflow=error (unverified for this version)",
+          "swa_rollback=free (unverified for this version)"
         ],
         "tune_steps": [
-          "Load the MLX model with Context Length 65536",
-          "Disable idle auto-unload (JIT TTL) for the session"
+          "mlx_lm.server --model \u003cmlx-model\u003e"
         ],
         "context_note": "tuned for agentic use"
       }
@@ -140,42 +139,42 @@
       "rank": 4,
       "model": "qwen3.5:4b",
       "model_name": "Qwen3.5 4B",
-      "quant": "Q4_K_M",
-      "runtime": "llamacpp",
-      "try_command": "trialm try qwen3.5:4b --runtime llamacpp --harness codex",
+      "quant": "MLX-4bit",
+      "runtime": "mlx-lm",
+      "try_command": "trialm try qwen3.5:4b --runtime mlx-lm --quant MLX-4bit --harness codex",
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
-        "runtime": "llamacpp",
+        "kind": "simulated",
+        "runtime": "mlx-lm",
         "tuned": true,
-        "backend": "metal",
-        "quant": "Q4_K_M",
-        "download_gb": 2.74093789,
+        "backend": "mlx",
+        "quant": "MLX-4bit",
+        "download_gb": 3.0343007,
         "context_tokens": 65536,
-        "memory_gb": 5.58586118,
+        "memory_gb": 5.87922398,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 38.3578171,
-        "decode_tps_deep": 30.2188438,
-        "prefill_tps": 1143.18312,
-        "cold_first_reply_s": 9.94920854,
-        "follow_up_ttft_s": 3.7778352,
-        "follow_up_turn_s": 13.7054156,
-        "session_s": 634.245369,
+        "decode_tps": 40.9755193,
+        "decode_tps_deep": 19.6461259,
+        "prefill_tps": 1166.51339,
+        "cold_first_reply_s": 19.6735814,
+        "follow_up_ttft_s": 3.7022785,
+        "follow_up_turn_s": 18.9724647,
+        "session_s": 976.895799,
         "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 70,
+        "decode_error_range_pct": 70,
+        "prefill_error_range_pct": 80,
         "no_speed_claim": false,
         "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+          "trial stand-in: no cloud provider hosts this exact model, so trials use Qwen3.5 9B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
         ],
         "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
+          "overflow=error (unverified for this version)",
+          "swa_rollback=free (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
+          "mlx_lm.server --model \u003cmlx-model\u003e"
         ],
         "context_note": "tuned for agentic use"
       }
@@ -190,6 +189,7 @@
       "verdict": "usable",
       "runtime_installed": false,
       "prediction": {
+        "kind": "simulated",
         "runtime": "llamacpp",
         "tuned": true,
         "backend": "metal",
@@ -199,19 +199,19 @@
         "memory_gb": 9.61067495,
         "budget_gb": 17.1798692,
         "fit": "fits",
-        "decode_tps": 15.8208109,
-        "decode_tps_deep": 14.4158223,
+        "decode_tps": 13.7662188,
+        "decode_tps_deep": 9.97994008,
         "prefill_tps": 377.397548,
-        "cold_first_reply_s": 26.8388595,
+        "cold_first_reply_s": 53.6200506,
         "follow_up_ttft_s": 9.84884382,
-        "follow_up_turn_s": 30.6593112,
-        "session_s": 1332.83837,
+        "follow_up_turn_s": 39.9091446,
+        "session_s": 1800.75201,
         "cloud_session_s": 120,
         "decode_error_range_pct": 45,
         "prefill_error_range_pct": 55,
         "no_speed_claim": false,
         "warnings": [
-          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+          "trial stand-in: no cloud provider hosts this exact model, so trials use Gemma 4 26B-A4B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
         ],
         "assumptions": [
           "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
@@ -225,5 +225,5 @@
       }
     }
   ],
-  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score"
+  "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last"
 }

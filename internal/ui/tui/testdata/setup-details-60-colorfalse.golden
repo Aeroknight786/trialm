@@ -1,0 +1,19 @@
+✦ triaLM  Codex · Apple M5 · 16 GB for models
+╭────────────────────────────────────────────────────────╮
+│ Setting up Qwen3.6 35B-A3B for Codex                   │
+│                                                        │
+│ Install? 13.2 GB                                       │
+│                                                        │
+│ · Install llama.cpp b12182                             │
+│ · Qwen3.6-35B-A3B.gguf                                 │
+│ · Save owned launcher                                  │
+│ · llama-server :8080 · in-process bridge               │
+│ · speed · greeting · tool call · follow-up             │
+│ sha256 checked                                         │
+│ archive extracted                                      │
+│ download resumed                                       │
+│ range accepted                                         │
+│ 8.1 GB received                                        │
+╰────────────────────────────────────────────────────────╯
+
+⏎ Install   esc Back   v Details

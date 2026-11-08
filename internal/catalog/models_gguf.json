@@ -225,7 +225,7 @@
     "RecurrentStateBytes": 52690944,
     "Generated": true,
     "UpstreamUnverified": true,
-    "TrialStandIn": "",
+    "TrialStandIn": "Qwen3.5 9B, the same family one size up, so trial answers are a little better than the local model",
     "DecodeEff": 0,
     "NativeCtx": 262144,
     "Tools": true,
@@ -246,7 +246,7 @@
         "Estimated": false
       }
     ],
-    "OpenRouterID": "qwen/qwen3.5-4b",
+    "OpenRouterID": "qwen/qwen3.5-9b",
     "CloudPrecision": "provider-dependent",
     "QuantMatchesCloud": false,
     "HFGGUFRepo": "unsloth/Qwen3.5-4B-GGUF",
@@ -281,7 +281,7 @@
     "RecurrentStateBytes": 0,
     "Generated": true,
     "UpstreamUnverified": true,
-    "TrialStandIn": "",
+    "TrialStandIn": "Gemma 4 26B-A4B, the same family one size up, so trial answers are a little better than the local model",
     "DecodeEff": 0,
     "NativeCtx": 262144,
     "Tools": true,
@@ -302,7 +302,7 @@
         "Estimated": false
       }
     ],
-    "OpenRouterID": "google/gemma-4-12b-it",
+    "OpenRouterID": "google/gemma-4-26b-a4b-it",
     "CloudPrecision": "provider-dependent",
     "QuantMatchesCloud": false,
     "HFGGUFRepo": "unsloth/gemma-4-12b-it-GGUF",
@@ -424,7 +424,7 @@
     "RecurrentStateBytes": 0,
     "Generated": true,
     "UpstreamUnverified": true,
-    "TrialStandIn": "",
+    "TrialStandIn": "Devstral 2, the larger model of the same family, so trial answers are better than the local model",
     "DecodeEff": 0,
     "NativeCtx": 393216,
     "Tools": true,
@@ -460,7 +460,7 @@
         "FileTag": "UD-Q3_K_XL"
       }
     ],
-    "OpenRouterID": "mistralai/devstral-small-2512",
+    "OpenRouterID": "mistralai/devstral-2512",
     "CloudPrecision": "provider-dependent",
     "QuantMatchesCloud": false,
     "HFGGUFRepo": "unsloth/Devstral-Small-2-24B-Instruct-2512-GGUF",
@@ -594,7 +594,7 @@
         "Estimated": false
       }
     ],
-    "OpenRouterID": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "OpenRouterID": "nvidia/nemotron-3.5-lightning",
     "CloudPrecision": "provider-dependent",
     "QuantMatchesCloud": false,
     "HFGGUFRepo": "ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF",
@@ -629,7 +629,7 @@
     "RecurrentStateBytes": 0,
     "Generated": true,
     "UpstreamUnverified": true,
-    "TrialStandIn": "",
+    "TrialStandIn": "Granite 4.2 8B, a smaller model of the same family, so trial answers are weaker than the local model",
     "DecodeEff": 0,
     "NativeCtx": 131072,
     "Tools": true,
@@ -650,7 +650,7 @@
         "Estimated": false
       }
     ],
-    "OpenRouterID": "ibm-granite/granite-4.2-30b",
+    "OpenRouterID": "ibm-granite/granite-4.2-8b",
     "CloudPrecision": "provider-dependent",
     "QuantMatchesCloud": false,
     "HFGGUFRepo": "ibm-granite/granite-4.2-30b-GGUF",
@@ -712,6 +712,177 @@
     "HFMLXRepo": "",
     "Notes": [
       "geometry and file sizes read from the GGUF headers in ibm-granite/granite-4.2-8b-GGUF"
+    ]
+  },
+  {
+    "ID": "lfm2.5-24b-a2b",
+    "Name": "LFM2.5 24B-A2B",
+    "OllamaTag": "lfm2.5:24b-a2b",
+    "Aliases": null,
+    "Family": "lfm2moe",
+    "TotalParamsB": 23.971587712,
+    "ReadParamsB": 2.454808192,
+    "MatmulParamsB": 2.454808192,
+    "MoE": true,
+    "ExpertsTotal": 64,
+    "ExpertsActive": 4,
+    "Layers": 40,
+    "FullAttnLayers": 10,
+    "SWALayers": 0,
+    "SWAWindow": 0,
+    "KVHeads": 8,
+    "HeadDim": 64,
+    "QHeads": 32,
+    "RecurrentLayers": 30,
+    "KVPerTokenF16": 20480,
+    "SWAKVPerTokenF16": 0,
+    "RecurrentStateBytes": 491520,
+    "Generated": true,
+    "UpstreamUnverified": true,
+    "TrialStandIn": "",
+    "DecodeEff": 0,
+    "NativeCtx": 131072,
+    "Tools": true,
+    "Thinking": true,
+    "Quants": [
+      {
+        "Name": "Q4_K_M",
+        "Format": "gguf",
+        "FileBytes": 14526258464,
+        "ReadBytesPerToken": 1538931200,
+        "Estimated": false
+      },
+      {
+        "Name": "Q8_0",
+        "Format": "gguf",
+        "FileBytes": 25493732640,
+        "ReadBytesPerToken": 2623904256,
+        "Estimated": false
+      }
+    ],
+    "OpenRouterID": "liquid/lfm-2.5-24b-a2b",
+    "CloudPrecision": "provider-dependent",
+    "QuantMatchesCloud": false,
+    "HFGGUFRepo": "LiquidAI/LFM2.5-24B-A2B-GGUF",
+    "HFMLXRepo": "",
+    "Notes": [
+      "geometry and file sizes read from the GGUF headers in LiquidAI/LFM2.5-24B-A2B-GGUF",
+      "hybrid model: 30 of 40 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 10 layers"
+    ]
+  },
+  {
+    "ID": "lfm2.5-8b-a1b",
+    "Name": "LFM2.5 8B-A1B",
+    "OllamaTag": "lfm2.5:8b-a1b",
+    "Aliases": null,
+    "Family": "lfm2moe",
+    "TotalParamsB": 8.467856832,
+    "ReadParamsB": 1.685667264,
+    "MatmulParamsB": 1.685667264,
+    "MoE": true,
+    "ExpertsTotal": 32,
+    "ExpertsActive": 4,
+    "Layers": 24,
+    "FullAttnLayers": 6,
+    "SWALayers": 0,
+    "SWAWindow": 0,
+    "KVHeads": 8,
+    "HeadDim": 64,
+    "QHeads": 32,
+    "RecurrentLayers": 18,
+    "KVPerTokenF16": 12288,
+    "SWAKVPerTokenF16": 0,
+    "RecurrentStateBytes": 294912,
+    "Generated": true,
+    "UpstreamUnverified": true,
+    "TrialStandIn": "",
+    "DecodeEff": 0,
+    "NativeCtx": 128000,
+    "Tools": true,
+    "Thinking": true,
+    "NotForCoding": true,
+    "Quants": [
+      {
+        "Name": "Q4_K_M",
+        "Format": "gguf",
+        "FileBytes": 5155564768,
+        "ReadBytesPerToken": 1067415296,
+        "Estimated": false
+      },
+      {
+        "Name": "Q8_0",
+        "Format": "gguf",
+        "FileBytes": 9010195680,
+        "ReadBytesPerToken": 1795880704,
+        "Estimated": false
+      }
+    ],
+    "OpenRouterID": "",
+    "CloudPrecision": "provider-dependent",
+    "QuantMatchesCloud": false,
+    "HFGGUFRepo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+    "HFMLXRepo": "",
+    "Notes": [
+      "geometry and file sizes read from the GGUF headers in LiquidAI/LFM2.5-8B-A1B-GGUF",
+      "no cloud provider hosts this model: estimates only, no trial",
+      "hybrid model: 18 of 24 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 6 layers"
+    ]
+  },
+  {
+    "ID": "lfm3-1.7b",
+    "Name": "LFM3 1.7B",
+    "OllamaTag": "lfm3:1.7b",
+    "Aliases": null,
+    "Family": "lfm3",
+    "TotalParamsB": 1.7288016,
+    "ReadParamsB": 1.7288016,
+    "MatmulParamsB": 1.7288016,
+    "MoE": false,
+    "ExpertsTotal": 0,
+    "ExpertsActive": 0,
+    "Layers": 24,
+    "FullAttnLayers": 6,
+    "SWALayers": 5,
+    "SWAWindow": 256,
+    "KVHeads": 4,
+    "HeadDim": 128,
+    "QHeads": 16,
+    "RecurrentLayers": 13,
+    "KVPerTokenF16": 12288,
+    "SWAKVPerTokenF16": 10240,
+    "RecurrentStateBytes": 638976,
+    "Generated": true,
+    "UpstreamUnverified": true,
+    "TrialStandIn": "",
+    "DecodeEff": 0,
+    "NativeCtx": 262144,
+    "Tools": true,
+    "Thinking": true,
+    "NotForCoding": true,
+    "Quants": [
+      {
+        "Name": "Q4_K_M",
+        "Format": "gguf",
+        "FileBytes": 1099627808,
+        "ReadBytesPerToken": 1091380480,
+        "Estimated": false
+      },
+      {
+        "Name": "Q8_0",
+        "Format": "gguf",
+        "FileBytes": 1846238496,
+        "ReadBytesPerToken": 1837991168,
+        "Estimated": false
+      }
+    ],
+    "OpenRouterID": "liquid/lfm-3-1.7b",
+    "CloudPrecision": "provider-dependent",
+    "QuantMatchesCloud": false,
+    "HFGGUFRepo": "LiquidAI/LFM3-1.7B-GGUF",
+    "HFMLXRepo": "",
+    "Notes": [
+      "geometry and file sizes read from the GGUF headers in LiquidAI/LFM3-1.7B-GGUF",
+      "hybrid model: 13 of 24 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 6 layers"
     ]
   }
 ]

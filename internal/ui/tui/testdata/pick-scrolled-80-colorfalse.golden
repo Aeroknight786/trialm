@@ -1,0 +1,34 @@
+✦ triaLM  Codex · Apple M5 · 16 GB for models
+Models · 8 of 14
+  ○ Qwen3-Coder 30B-A3B         up to 128K  ~47 t/s   12.9 GB SIM │
+  ○ GLM-4.7-Flash               up to 64K   ~45 t/s   12.9 GB SIM │
+  ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB SIM │
+✓ ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB SIM █
+  ○ Granite 4.2 8B              up to 128K  ~22 t/s   5.35 GB SIM │
+  ○ Llama 3.1 8B Instruct       up to 128K  ~15 t/s   8.54 GB SIM │
+  ○ Qwen3.5 4B                  up to 256K  ~38 t/s   2.74 GB SIM │
+
+╭────────────────────────────────────────────────────────────────────────────╮
+│ Qwen  Qwen3.5 9B  estimate                                                 │
+│ KV cache  [f16] q8_0 q4_0                                                  │
+│ Engine    [llama.cpp]                                                      │
+│                                                                            │
+│ t/s when full       32K          64K          128K         256K            │
+│ Q4_K_MD             ~12 t/s      ~8.3 t/s     ~5.1 t/s     ~2.9 t/s        │
+│ 5.68 GB             6.98 GB      7.98 GB      9.98 GB      14.0 GB         │
+│ Q4_K_ME             ~12 t/s      ~8.3 t/s     ~5.1 t/s     ~2.9 t/s        │
+│ 5.68 GB             6.98 GB      7.98 GB      9.98 GB      14.0 GB         │
+│ Q4_K_MF             ~12 t/s      ~8.3 t/s     ~5.1 t/s     ~2.9 t/s        │
+│ 5.68 GB             6.98 GB      7.98 GB      9.98 GB      14.0 GB         │
+│ Q4_K_MG             ~12 t/s      ~8.3 t/s     ~5.1 t/s     ~2.9 t/s        │
+│ 5.68 GB             6.98 GB      7.98 GB      9.98 GB      14.0 GB         │
+│ Q4_K_MH             ~12 t/s      ~8.3 t/s     [~5.1 t/s]   ~2.9 t/s        │
+│ 5.68 GB             6.98 GB      7.98 GB      [9.98 GB]    14.0 GB         │
+│ Files 4–8 of 8 ↕                                                           │
+│                                                                            │
+│ Speed   ~22 t/s empty → ~5.1 t/s at 128K    First reply  ~33 s             │
+│ Assumes Codex starts with 9K tokens; plugins add more                      │
+│ Memory  ████████████░░░░░░░░  9.98 of 16 GB                                │
+╰────────────────────────────────────────────────────────────────────────────╯
+
+↑↓ File   ←→ Context   c Cache   e Engine   ⏎ Try   s Set up   esc Models

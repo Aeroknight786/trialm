@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,6 +25,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/api/ollama"
 	"github.com/aeroknight786/trialm/internal/api/openai"
 	"github.com/aeroknight786/trialm/internal/api/responses"
+	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/llm"
 	"github.com/aeroknight786/trialm/internal/sim"
 	"github.com/aeroknight786/trialm/internal/tok"
@@ -36,8 +38,9 @@ const OllamaVersion = "0.13.5"
 
 // Config configures the server.
 type Config struct {
-	Device   *sim.Device
-	Upstream upstream.Client
+	TrialSummary func([]sim.Record) string
+	Device       *sim.Device
+	Upstream     upstream.Client
 	// Model describes the simulated model for discovery endpoints.
 	Model api.ModelInfo
 	// DeviceName and RuntimeName are used in logs and the summary.
@@ -49,6 +52,8 @@ type Config struct {
 	AllowOrigins []string
 	// MaxBodyBytes caps request bodies (default 32 MiB).
 	MaxBodyBytes int64
+	// Harness identifies the tool whose conversation openings are measured.
+	Harness string
 	// Bridge relays requests to a real local runtime with no simulation:
 	// the harness speaks its own protocol (Responses, Anthropic, Ollama),
 	// the runtime gets plain Chat Completions. Device may be nil.
@@ -57,18 +62,21 @@ type Config struct {
 
 // Server is the simulated runtime.
 type Server struct {
-	cfg       Config
-	mux       *http.ServeMux
-	chat      api.Frontend
-	anth      *anthropic.Frontend
-	resp      api.Frontend
-	ollChat   api.Frontend
-	ollGen    api.Frontend
-	logMu     sync.Mutex
-	listener  net.Listener
-	httpSrv   *http.Server
-	startedAt time.Time
-	bridgeN   atomic.Int64
+	cfg            Config
+	mux            *http.ServeMux
+	chat           api.Frontend
+	anth           *anthropic.Frontend
+	resp           api.Frontend
+	ollChat        api.Frontend
+	ollGen         api.Frontend
+	logMu          sync.Mutex
+	listener       net.Listener
+	httpSrv        *http.Server
+	startedAt      time.Time
+	bridgeN        atomic.Int64
+	openingHarness atomic.Value
+	warnedNumCtx   sync.Once
+	warnedSystem   sync.Once
 }
 
 // New creates a server.
@@ -78,6 +86,13 @@ func New(cfg Config) *Server {
 	}
 	if cfg.Log == nil {
 		cfg.Log = io.Discard
+	}
+	if cfg.Bridge && strings.EqualFold(cfg.RuntimeName, "ollama") {
+		if client, ok := cfg.Upstream.(*upstream.OpenAICompat); ok {
+			clone := *client
+			clone.Ollama = true
+			cfg.Upstream = &clone
+		}
 	}
 	s := &Server{
 		cfg:       cfg,
@@ -89,6 +104,10 @@ func New(cfg Config) *Server {
 		ollGen:    ollama.NewGenerate(),
 		startedAt: time.Now(),
 	}
+	// Initialize before a Serve goroutine can race a fast --launch child's
+	// exit and Shutdown. http.Server coordinates Serve/Shutdown internally.
+	s.httpSrv = &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second}
+	s.ObserveHarness(cfg.Harness)
 	s.routes()
 	return s
 }
@@ -99,6 +118,7 @@ func (s *Server) routes() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprint(w, "Ollama is running (simulated by triaLM)")
 	})
+	m.HandleFunc("HEAD /api/hello", func(w http.ResponseWriter, r *http.Request) {})
 	m.HandleFunc("HEAD /{$}", func(w http.ResponseWriter, r *http.Request) {})
 	m.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, 200, map[string]string{"status": "ok"})
@@ -277,6 +297,7 @@ func (s *Server) gen(fe api.Frontend) http.HandlerFunc {
 			rec.PromptTokens = cerr.PromptTokens
 			rec.Finish = "context_error"
 			n := dev.Stats().Add(rec)
+			s.logWarnings(n, fe.Name(), req)
 			s.logf("#%d %s  ✗ rejected: %s\n", n, fe.Name(), cerr.Message)
 			fe.WriteError(w, http.StatusBadRequest, "context_length_exceeded", cerr.Message)
 			return
@@ -292,6 +313,7 @@ func (s *Server) gen(fe api.Frontend) http.HandlerFunc {
 		if err != nil {
 			rec.Error = err.Error()
 			n := dev.Stats().Add(rec)
+			s.logWarnings(n, fe.Name(), req)
 			s.logf("#%d %s  ✗ upstream error: %v\n", n, fe.Name(), err)
 			status, kind := upstreamErrorStatus(err)
 			fe.WriteError(w, status, kind, "triaLM upstream: "+err.Error())
@@ -306,6 +328,7 @@ func (s *Server) gen(fe api.Frontend) http.HandlerFunc {
 		defer release()
 		plan := dev.Plan(prep)
 		meta.PromptTokens = plan.PromptTokens
+		meta.CachedPromptTokens = plan.CachedTokens
 
 		var res sim.PaceResult
 		if req.Stream {
@@ -341,6 +364,9 @@ func (s *Server) gen(fe api.Frontend) http.HandlerFunc {
 
 		// Record.
 		rec.PromptTokens, rec.CachedTokens, rec.PrefillTokens = plan.PromptTokens, plan.CachedTokens, plan.PrefillTokens
+		if opening(req) && prep.Seq.Len() > 0 {
+			rec.Tools = sim.GroupTools(prep.Req.Tools, float64(plan.PromptTokens)/float64(prep.Seq.Len()))
+		}
 		rec.Cold, rec.LoadReason = plan.Cold, plan.LoadReason
 		rec.QueueSec = queued.Seconds()
 		rec.LoadSec = plan.LoadDur.Seconds()
@@ -383,8 +409,20 @@ func (s *Server) relay(w http.ResponseWriter, r *http.Request, fe api.Frontend, 
 	start := time.Now()
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
-	for _, wn := range req.Warnings {
-		s.logf("#%d %s  ! %s\n", n, fe.Name(), wn)
+	s.logWarnings(int(n), fe.Name(), req)
+	ctxN := s.cfg.Model.ContextLength
+	if client, ok := s.cfg.Upstream.(*upstream.OpenAICompat); ok && client.Ollama {
+		if req.NumCtx > 0 {
+			ctxN = req.NumCtx
+		} else if ctxN > 0 {
+			req.NumCtx = ctxN
+		}
+	}
+	if ctxN > 0 {
+		room := max(256, ctxN-tok.Render(req, tok.RenderOptions{}).Len())
+		if req.MaxTokens > room {
+			req.MaxTokens = room
+		}
 	}
 	events, err := s.cfg.Upstream.Stream(ctx, req)
 	if err != nil {
@@ -396,6 +434,7 @@ func (s *Server) relay(w http.ResponseWriter, r *http.Request, fe api.Frontend, 
 	var st api.Stream
 	var resp llm.Response
 	var first time.Time
+	complete := false
 	for ev := range events {
 		switch ev.Type {
 		case llm.EventError:
@@ -408,6 +447,7 @@ func (s *Server) relay(w http.ResponseWriter, r *http.Request, fe api.Frontend, 
 			}
 			return
 		case llm.EventDone:
+			complete = true
 			resp.Apply(ev)
 		default:
 			if first.IsZero() {
@@ -432,6 +472,9 @@ func (s *Server) relay(w http.ResponseWriter, r *http.Request, fe api.Frontend, 
 	}
 	if len(resp.ToolCalls) > 0 && resp.FinishReason == llm.FinishStop {
 		resp.FinishReason = llm.FinishToolCalls
+	}
+	if complete {
+		s.recordOpening(req, resp.Usage.PromptTokens)
 	}
 	end := time.Now()
 	tm := llm.Timings{Total: end.Sub(start), EvalTokens: resp.Usage.CompletionTokens, PromptEvalTokens: resp.Usage.PromptTokens - resp.Usage.CachedPromptTokens}
@@ -528,7 +571,13 @@ func (s *Server) logf(format string, a ...any) {
 }
 
 func (s *Server) logRecord(n int, rec sim.Record, pl *sim.Plan, prep *sim.Prepared, res sim.PaceResult) {
+	s.logWarnings(n, rec.Protocol, prep.Req)
 	var b strings.Builder
+	for _, note := range pl.Notes {
+		if strings.HasPrefix(note, "upstream prompt_tokens=") {
+			fmt.Fprintf(&b, "#%d %s  ! %s\n", n, rec.Protocol, note)
+		}
+	}
 	fmt.Fprintf(&b, "#%-3d %-11s prompt %s", n, rec.Protocol, sim.Kilo(rec.PromptTokens))
 	if rec.CachedTokens > 0 {
 		fmt.Fprintf(&b, " (cached %s, new %s)", sim.Kilo(rec.CachedTokens), sim.Kilo(rec.PrefillTokens))
@@ -549,11 +598,17 @@ func (s *Server) logRecord(n int, rec sim.Record, pl *sim.Plan, prep *sim.Prepar
 		fmt.Fprintf(&b, " (cloud %s)", sim.FormatDur(rec.CloudSec))
 	}
 	b.WriteString("\n")
+	if n := sim.ToolTokens(rec.Tools); n > 0 {
+		fmt.Fprintf(&b, "     ↳ tool definitions %s: %s\n", sim.Kilo(n), sim.ToolsLine(rec.Tools, 4))
+	}
 	if rec.QueueSec > 0.5 {
 		fmt.Fprintf(&b, "     ↳ waited %s for the device (another request was running)\n", sim.FormatDur(rec.QueueSec))
 	}
 	if pl.Cold {
 		fmt.Fprintf(&b, "     ↳ load %s: %s\n", sim.FormatDur(rec.LoadSec), pl.LoadReason)
+	}
+	for _, note := range pl.Notes {
+		fmt.Fprintf(&b, "     ↳ %s\n", note)
 	}
 	if pl.Miss != nil {
 		fmt.Fprintf(&b, "     ↳ cache miss at token %d of a %d-token cached prompt: %s\n", pl.Miss.At, pl.Miss.Previous, pl.Miss.Reason)
@@ -566,7 +621,7 @@ func (s *Server) logRecord(n int, rec sim.Record, pl *sim.Plan, prep *sim.Prepar
 		fmt.Fprintf(&b, "     ↳ ⚠ generation stopped: the context window (%d tokens) is full\n", prep.Ctx)
 	}
 	if rec.CloudLagSec > 0.5 {
-		fmt.Fprintf(&b, "     ↳ the cloud was %s slower than your simulated device here (shown at cloud speed)\n", sim.FormatDur(rec.CloudLagSec))
+		fmt.Fprintf(&b, "     ↳ cloud-bound: the cloud was %s slower than your simulated device here (shown at cloud speed)\n", sim.FormatDur(rec.CloudLagSec))
 	}
 	if rec.Error != "" {
 		fmt.Fprintf(&b, "     ↳ ✗ %s\n", rec.Error)
@@ -605,7 +660,6 @@ func (s *Server) Listen(host string, port int, fallback bool) (int, error) {
 
 // Serve serves on the bound listener until Shutdown.
 func (s *Server) Serve() error {
-	s.httpSrv = &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second}
 	err := s.httpSrv.Serve(s.listener)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
@@ -626,6 +680,9 @@ func (s *Server) Summary() string {
 	if s.cfg.Device == nil {
 		return fmt.Sprintf("trialm bridge relayed %d request(s) to %s\n", s.bridgeN.Load(), s.cfg.Upstream.Describe())
 	}
+	if s.cfg.TrialSummary != nil {
+		return s.cfg.TrialSummary(s.cfg.Device.Stats().Snapshot())
+	}
 	return s.cfg.Device.Stats().Summarize().Report(s.cfg.DeviceName, s.cfg.RuntimeName, s.cfg.Model.Name)
 }
 
@@ -636,3 +693,66 @@ func (s *Server) StatsJSON() ([]byte, error) {
 	}
 	return json.MarshalIndent(s.cfg.Device.Stats().Snapshot(), "", "  ")
 }
+
+// logWarnings makes lossy conversions visible on both trial and bridge paths.
+func (s *Server) logWarnings(n int, proto string, req *llm.Request) {
+	for _, msg := range req.Warnings {
+		s.logf("#%d %s  ! %s\n", n, proto, msg)
+	}
+	if s.cfg.Bridge && req.Protocol == llm.ProtocolOllama && req.NumCtx > 0 {
+		client, native := s.cfg.Upstream.(*upstream.OpenAICompat)
+		if native && client.Ollama && s.cfg.Model.ContextLength > 0 && req.NumCtx != s.cfg.Model.ContextLength {
+			s.warnedNumCtx.Do(func() {
+				s.logf("#%d %s  ! options.num_ctx=%d differs from the configured context (%d); Ollama may reload the model\n", n, proto, req.NumCtx, s.cfg.Model.ContextLength)
+			})
+		} else if !native || !client.Ollama {
+			s.warnedNumCtx.Do(func() {
+				ctxN := s.cfg.Model.ContextLength
+				if ctxN > 0 {
+					s.logf("#%d %s  ! options.num_ctx=%d ignored: the runtime's context is fixed at %d (set it on the runtime)\n", n, proto, req.NumCtx, ctxN)
+				} else {
+					s.logf("#%d %s  ! options.num_ctx=%d ignored: set the context on the runtime\n", n, proto, req.NumCtx)
+				}
+			})
+		}
+	}
+	pastLeading := false
+	for _, m := range req.Messages {
+		if m.Role != llm.RoleSystem {
+			pastLeading = true
+			continue
+		}
+		if pastLeading {
+			s.warnedSystem.Do(func() {
+				s.logf("#%d %s  ! mid-conversation system message merged into a user turn for the runtime's chat template\n", n, proto)
+			})
+			break
+		}
+	}
+}
+
+// Requests with assistant history are follow-ups, including tool-result turns.
+func (s *Server) recordOpening(req *llm.Request, tokens int) {
+	id, _ := s.openingHarness.Load().(string)
+	if runtime.GOOS != "darwin" || id == "" || !opening(req) {
+		return
+	}
+	if tokens <= 0 {
+		tokens = tok.Render(req, tok.RenderOptions{}).Len()
+	}
+	if err := harness.RecordOpeningPrompt(id, tokens); err != nil {
+		s.logf("Opening prompt count could not be saved: %v\n", err)
+	}
+}
+
+func opening(req *llm.Request) bool {
+	for _, msg := range req.Messages {
+		if msg.Role == "assistant" {
+			return false
+		}
+	}
+	return true
+}
+
+// ObserveHarness enables opening counts after triaLM's own verification probes.
+func (s *Server) ObserveHarness(id string) { s.openingHarness.Store(id) }

@@ -49,6 +49,8 @@ type Request struct {
 	// ToolChoice is an OpenAI-style tool_choice value ("auto", "none",
 	// "required", or {"type":"function","function":{"name":...}}), or nil.
 	ToolChoice json.RawMessage
+	// ResponseFormat is an OpenAI-style response_format (JSON object or schema).
+	ResponseFormat json.RawMessage
 	// MaxTokens is the client's output cap; 0 means unspecified.
 	MaxTokens   int
 	Temperature *float64
@@ -153,10 +155,13 @@ type Event struct {
 
 // Usage reports token counts.
 type Usage struct {
-	PromptTokens       int `json:"prompt_tokens"`
-	CompletionTokens   int `json:"completion_tokens"`
-	ReasoningTokens    int `json:"reasoning_tokens,omitempty"`
-	CachedPromptTokens int `json:"cached_prompt_tokens,omitempty"`
+	PromptTokens       int  `json:"prompt_tokens"`
+	CompletionTokens   int  `json:"completion_tokens"`
+	ReasoningTokens    int  `json:"reasoning_tokens,omitempty"`
+	CachedPromptTokens int  `json:"cached_prompt_tokens,omitempty"`
+	CacheKnown         bool `json:"cache_known,omitempty"`
+	// CostUSD is the upstream's own charge for the request (OpenRouter), nil if not reported.
+	CostUSD *float64 `json:"cost_usd,omitempty"`
 }
 
 // Timings are the simulated local-runtime timings of one request. Frontends

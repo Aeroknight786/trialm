@@ -1,0 +1,122 @@
+package calibrationcli
+
+import (
+	"context"
+	"encoding/json"
+	"math"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/aeroknight786/trialm/internal/calib"
+	"github.com/aeroknight786/trialm/internal/predict"
+)
+
+func TestCalibrationPlanAndRefitNeedNoEngine(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("TRIALM_HOME", home)
+	// No PATH engine and no engines directory. Neither path fingerprints hardware.
+	t.Setenv("PATH", t.TempDir())
+	for _, args := range [][]string{{"--plan", "--json"}, {"--plan", "--quick"}} {
+		if e := Run(args); e != nil {
+			t.Fatal(args, e)
+		}
+	}
+	b, e := os.ReadFile(filepath.Join("..", "..", "internal", "calib", "testdata", "calib-quiet.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = os.WriteFile(filepath.Join(home, "calib.json"), b, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if e = Run([]string{"--refit", "--json"}); e != nil {
+		t.Fatal(e)
+	}
+	c, e := calib.Load(home)
+	if e != nil || c.FittingVersion != calib.FittingVersion || len(c.Fits) == 0 {
+		t.Fatal(c, e)
+	}
+	for _, args := range [][]string{{"--plan", "--refit"}, {"--status", "--refit"}, {"--plan", "--status"}} {
+		if e = Run(args); e == nil {
+			t.Fatal("conflicting modes accepted", args)
+		}
+	}
+}
+
+func TestCalibrationCheckModes(t *testing.T) {
+	t.Setenv("TRIALM_HOME", t.TempDir())
+	for _, args := range [][]string{{"--check", "model.gguf", "--plan"}, {"--check", "model.gguf", "--refit"}, {"--check", "model.gguf", "--status"}, {"--check", "model.gguf", "--quick"}, {"--check"}, {"--check", ""}} {
+		if e := Run(args); e == nil {
+			t.Fatal("invalid mode accepted", args)
+		}
+	}
+	// A URL is rejected locally before hardware access or a benchmark.
+	if e := calibrationCheck(context.Background(), t.TempDir(), "absent-bench", "https://example.com/model.gguf", false); e == nil || !strings.Contains(e.Error(), "local GGUF") {
+		t.Fatal(e)
+	}
+}
+
+func TestCalibrationCheckPredictor(t *testing.T) {
+	r := predict.Result{Kind: "calibrated", Accuracy: predict.Accuracy{DecodePct: 80, PrefillPct: 90, Basis: "test path"}, Timing: &predict.Timing{EffBandwidth: 1e9, WeightsBytesPerTok: 5e9, DecodeMult: 1, PrefillMult: 1, MatmulSecPerTok: .01, AttnFLOPSEff: 1e12}}
+	for _, row := range []calib.BenchRow{{Gen: 8, Depth: 32768}, {Prompt: 512, Depth: 0}} {
+		p, e := calibrationCheckPredictor(r)(row)
+		if e != nil || p.Basis != "test path" {
+			t.Fatal(p, e)
+		}
+		want, band := 100., 90
+		if row.Gen > 0 {
+			want, band = .2, 80
+		}
+		if math.Abs(p.TPS-want) > 1e-8 || p.BandPct != band {
+			t.Fatal(p, want, band)
+		}
+	}
+	if _, e := calibrationCheckPredictor(r)(calib.BenchRow{}); e == nil {
+		t.Fatal("zero-token prediction")
+	}
+	r.Kind = "simulated"
+	if _, e := calibrationCheckPredictor(r)(calib.BenchRow{Gen: 8}); e == nil {
+		t.Fatal("uncalibrated validation")
+	}
+}
+
+func TestSpecFlagAndEnvironmentPlan(t *testing.T) {
+	t.Setenv("TRIALM_HOME", t.TempDir())
+	for _, tc := range []struct {
+		env     string
+		flags   []string
+		count   int
+		seconds float64
+	}{
+		// The sweep is on by default (the owner kept it: ~30 s for 27 steps).
+		{"", nil, 54, 377}, {"", []string{"--quick"}, 12, 116}, {"", []string{"--spec=false"}, 27, 347}, {"0", []string{"--quick"}, 6, 109}, {"0", []string{"--spec", "--quick"}, 12, 116}, {"1", []string{"--quick"}, 12, 116},
+	} {
+		t.Setenv("TRIALM_CALIBRATE_SPEC", tc.env)
+		f, err := os.CreateTemp(t.TempDir(), "plan")
+		if err != nil {
+			t.Fatal(err)
+		}
+		original := os.Stdout
+		os.Stdout = f
+		err = Run(append([]string{"--plan", "--json"}, tc.flags...))
+		os.Stdout = original
+		if err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		if _, err = f.Seek(0, 0); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		var plan struct {
+			Steps   []calib.Step `json:"steps"`
+			Seconds float64      `json:"estimated_seconds"`
+		}
+		err = json.NewDecoder(f).Decode(&plan)
+		f.Close()
+		if err != nil || len(plan.Steps) != tc.count || plan.Seconds != tc.seconds {
+			t.Fatal(tc, plan, err)
+		}
+	}
+}

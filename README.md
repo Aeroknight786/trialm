@@ -4,7 +4,17 @@ Paste one message into your coding agent (Claude Code, Codex, OpenCode, …). It
 
 ## Get started
 
-Paste this into your coding agent:
+On an Apple Silicon Mac, in a terminal:
+
+```bash
+curl -fsSL https://mortiphi.com/trialm/install.sh | sh
+```
+
+It installs `trialm` and starts it. triaLM shows the models this Mac can run for your coding agent and how long each reply would take. Press Enter on one to **try it first**: it runs in the cloud, in your own agent and project, with replies paced to this Mac's estimated speed. Sign in with GitHub or Google for **$1 of free trial credit** (or press `o` to use your own OpenRouter key). If you like it, `s` sets it up locally with one approval. More at [mortiphi.com/trialm](https://mortiphi.com/trialm).
+
+Trials send your agent's requests from your Mac through OpenRouter, only to providers that don't collect your data (OpenRouter's `data_collection: deny`; `--zdr` for zero retention). Mortiphi only issues the trial key and never sees your code or prompts. Nothing else is sent to Mortiphi unless you choose to: `f` after a trial sends a rating and a note, `r` after a setup shares its measured speeds. Neither includes code, prompts or file paths.
+
+Prefer to let your coding agent drive? Paste this into it:
 
 ```text
 Help me find, try and set up the best local AI model for coding on this computer, using triaLM (https://github.com/aeroknight786/trialm).
@@ -15,12 +25,7 @@ Help me find, try and set up the best local AI model for coding on this computer
 2. Run `trialm prompt --harness <the coding tool you are running in>` and follow those instructions exactly.
 ```
 
-You approve every download and change. The only things you do yourself:
-
-1. Save your OpenRouter key when asked — run `trialm login` in your own terminal (get a key at https://openrouter.ai/keys). The trial uses the real model in the cloud; a 30–45 minute trial typically costs $0.20–$2.
-2. Open one extra terminal for the trial session — the agent gives you the exact command.
-
-Prefer a terminal? `curl -fsSL https://github.com/aeroknight786/trialm/releases/latest/download/install.sh | sh` installs trialm and starts it; `trialm prompt --harness <tool>` prints the message to paste. On Windows: `irm https://github.com/aeroknight786/trialm/releases/latest/download/install.ps1 | iex`.
+You approve every download and change; the agent tells you when to run `trialm key` (the trial sign-in) in your own terminal.
 
 ## What you get
 
@@ -28,6 +33,18 @@ Prefer a terminal? `curl -fsSL https://github.com/aeroknight786/trialm/releases/
 - **A real trial**: answers come from the actual model, released at the speed your machine would produce them, with the waits a local setup really has (loading, reading long agent prompts, cache reuse). If a default setting would break your tool — such as a context window too small for Claude Code — you'll see it break.
 - **Exact setup**: install the runtime, download the exact file, apply tuned settings, connect your tool — each step shown and approved.
 - **A check**: measured speed vs the prediction, on your machine.
+
+## Use it from your own agent or app
+
+Once a model is set up (`trialm`, then Enter on it), any program can use it:
+
+```bash
+trialm launch --serve
+```
+
+This starts the engine if needed and prints one local address that speaks every common API: OpenAI Chat Completions and Responses (`http://127.0.0.1:11535/v1`), Anthropic Messages (`/v1/messages`) and Ollama (`/api/chat`). Point your agent's base URL there, use the model name it prints, and any API key. Ctrl-C stops the route; the engine stays warm for 15 minutes.
+
+You don't need to know the model's chat template. Local engines format requests with the model's own template, and many reject what agents send: a system message after the first, two user messages in a row, tool layouts. triaLM's route reshapes every request so the template accepts it, for every agent and every protocol. Known tools (Claude Code, Codex, OpenCode, Aider, Qwen Code, Cline, Continue) go through the same route: `trialm launch <tool>` wires them up for you.
 
 ## Good to know
 

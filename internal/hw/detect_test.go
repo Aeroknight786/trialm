@@ -275,3 +275,13 @@ func TestDetectRealMachine(t *testing.T) {
 	b, _ = json.MarshalIndent(rts, "", "  ")
 	t.Logf("DetectRuntimes() in %v:\n%s", el.Round(time.Millisecond), b)
 }
+
+func TestDetectMacWhenSysctlIsRestricted(t *testing.T) {
+	f := darwinRunner(t, "sysctl-m4pro.txt", "", "sp-displays-m4pro.json")
+	f.cmds["/usr/sbin/sysctl hw.memsize"] = fakeOut{err: errors.New("Operation not permitted")}
+	f.cmds["/usr/sbin/system_profiler SPHardwareDataType -json"] = fakeOut{out: `{"SPHardwareDataType":[{"chip_type":"Apple M4 Pro","physical_memory":"48 GB"}]}`}
+	s, err := (detector{r: f, goos: "darwin", goarch: "arm64", numCPU: 14}).detect(context.Background())
+	if err != nil || s.RAMBytes != 48*giB || s.CPUName != "Apple M4 Pro" || s.GPUs[0].VRAMBytes != s.RAMBytes {
+		t.Fatal(s, err)
+	}
+}
