@@ -86,6 +86,9 @@ func (m *Root) body() string {
 	case Ready:
 		return m.readyBody()
 	case Launching:
+		if m.cfg.Preferences.Tool == "generic" {
+			return "" // the route draws its own card below
+		}
 		return "Opening " + toolName(m.cfg.Preferences.Tool) + " on the local model…"
 	case Trial:
 		if m.address != "" {
