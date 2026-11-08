@@ -10,9 +10,9 @@ On an Apple Silicon Mac, in a terminal:
 curl -fsSL https://mortiphi.com/trialm/install.sh | sh
 ```
 
-It installs `trialm` and starts it. triaLM shows the models this Mac can run for your coding agent and how long each reply would take. Press Enter on one to **try it first**: it runs in the cloud, in your own agent and project, with replies paced to this Mac's speed. Sign in with GitHub or Google for **$1 of free trial credit** (or press `o` to use your own OpenRouter key). If you like it, `s` sets it up locally with one approval. More at [mortiphi.com/trialm](https://mortiphi.com/trialm).
+It installs `trialm` and starts it. triaLM shows the models this Mac can run for your coding agent and how long each reply would take. Press Enter on one to **try it first**: it runs in the cloud, in your own agent and project, with replies paced to this Mac's estimated speed. Sign in with GitHub or Google for **$1 of free trial credit** (or press `o` to use your own OpenRouter key). If you like it, `s` sets it up locally with one approval. More at [mortiphi.com/trialm](https://mortiphi.com/trialm).
 
-Trials send your agent's requests only to providers that keep no data. Nothing is sent to Mortiphi unless you choose to: `f` after a trial sends a rating and a note, `r` after a setup shares its measured speeds. Neither includes code, prompts or file paths.
+Trials send your agent's requests from your Mac through OpenRouter, only to providers that don't collect your data (OpenRouter's `data_collection: deny`; `--zdr` for zero retention). Mortiphi only issues the trial key and never sees your code or prompts. Nothing else is sent to Mortiphi unless you choose to: `f` after a trial sends a rating and a note, `r` after a setup shares its measured speeds. Neither includes code, prompts or file paths.
 
 Prefer to let your coding agent drive? Paste this into it:
 

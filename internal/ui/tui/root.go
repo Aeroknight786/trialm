@@ -999,7 +999,7 @@ func (m *Root) footer() string {
 		if m.busy {
 			return "ctrl-c Pause   v Details"
 		}
-		return "⏎ Now   s Later (run trialm calibrate)   v Details"
+		return "⏎ Calibrate now   s Skip, show models   v Details"
 	case Recipes:
 		if m.cfg.Picker != nil {
 			if r, _ := m.row(); m.gridFocus && !hasSim(r) {

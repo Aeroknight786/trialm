@@ -67,7 +67,7 @@ func (m *Root) launcher() string {
 	title := map[bool]string{true: "Your models", false: "Picks for this Mac"}[yours]
 	b += "\n  " + m.theme.selected.Bold(true).Render(title) + "\n"
 	for i, choice := range m.models {
-		mark, state, style := "○", choice.Download.String()+" · not on disk", m.theme.dim
+		mark, state, style := "○", choice.Download.String()+" download", m.theme.dim
 		speed := estimated(choice.Speed)
 		if choice.Journal != nil {
 			mark, state, style = "●", "ready", m.theme.good

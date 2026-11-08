@@ -18,7 +18,7 @@ func (m *Root) tryBody() string {
 	if m.cfg.Store.Key() != "" && m.cfg.Store.Read("credits.json", &credit) == nil && credit.Unit == "USD" {
 		cost = "$" + fmt.Sprintf("%.2f", credit.V) + " of credit left"
 	}
-	b := "Try " + name + " before you download it\n\n" + m.card("Runs in the cloud at this Mac's speed, in your own agent and project.\n"+cost+" · No download\nYour code goes only to providers that keep no data") + "\n\n"
+	b := "Try " + name + " before you download it\n\n" + m.card("Runs in your own agent and project, paced to this Mac's estimated speed.\n"+cost+" · No download\nYour code goes only to providers that don't collect it") + "\n\n"
 	if m.busy && m.pendingTrial {
 		return b + "Finish signing in in your browser. Waiting…"
 	}
