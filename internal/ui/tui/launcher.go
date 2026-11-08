@@ -12,11 +12,12 @@ import (
 
 // nextTool is the agent tab switches to on the main screen (the same one
 // when there is no other).
+// agents are the ones tab moves through: those found on this Mac, then
+// "Your own agent" (one local address for any app).
+func (m *Root) agentCycle() []string { return append(slices.Clone(m.cfg.Tools), "generic") }
 func (m *Root) nextTool() string {
-	if len(m.cfg.Tools) == 0 {
-		return m.cfg.Preferences.Tool
-	}
-	return m.cfg.Tools[(slices.Index(m.cfg.Tools, m.cfg.Preferences.Tool)+1)%len(m.cfg.Tools)]
+	all := m.agentCycle()
+	return all[(slices.Index(all, m.cfg.Preferences.Tool)+1)%len(all)]
 }
 
 func toolName(id string) string {
@@ -56,13 +57,11 @@ func (m *Root) launcher() string {
 	}
 	yours := slices.ContainsFunc(m.models, func(c core.ModelChoice) bool { return c.Journal != nil || c.Row.LocalPath != "" })
 	title := map[bool]string{true: "Your models", false: "Picks for this Mac"}[yours]
-	if len(m.cfg.Tools) > 1 {
-		b += "\n  " + m.theme.dim.Render("Agent") + "  "
-		for _, id := range m.cfg.Tools {
-			b += map[bool]string{true: m.theme.cloud.Render("[" + toolName(id) + "]"), false: m.theme.dim.Render(toolName(id))}[id == m.cfg.Preferences.Tool] + "  "
-		}
-		b += m.theme.dim.Render(" tab") + "\n"
+	b += "\n  " + m.theme.dim.Render("Agent") + "  "
+	for _, id := range m.agentCycle() {
+		b += map[bool]string{true: m.theme.cloud.Render("[" + toolName(id) + "]"), false: m.theme.dim.Render(toolName(id))}[id == m.cfg.Preferences.Tool] + "  "
 	}
+	b += m.theme.dim.Render(" tab") + "\n"
 	b += "\n  " + m.theme.selected.Bold(true).Render(title) + "\n"
 	for i, choice := range m.models {
 		mark, state, style := "○", choice.Download.String()+" download", m.theme.dim

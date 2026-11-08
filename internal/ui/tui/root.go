@@ -1044,10 +1044,7 @@ func (m *Root) footer() string {
 	case Details:
 		return "⏎ Try    s Set up    ? Sources    esc Back    q Quit"
 	case Home:
-		hint := ""
-		if next := m.nextTool(); next != m.cfg.Preferences.Tool {
-			hint = "    tab Agent"
-		}
+		hint := "    tab Agent"
 		if m.modelIndex < len(m.models) && core.TryFirst(m.models[m.modelIndex]) {
 			return "⏎ Try in " + toolName(m.cfg.Preferences.Tool) + "    s Set up " + m.models[m.modelIndex].Download.String() + hint + "    / Search    ? Help"
 		}
