@@ -65,7 +65,7 @@ func ModelFromGGUF(ref string) (catalog.Model, error) {
 	tmpl, _ := f.String("tokenizer.chat_template")
 	lt := strings.ToLower(tmpl)
 	m := catalog.Model{
-		ID: name, Name: nonEmpty(s.Name, name), OllamaTag: strings.ToLower(name), Family: s.Architecture,
+		ID: name, Name: nonEmpty(readableName(s.Name), name), OllamaTag: strings.ToLower(name), Family: s.Architecture,
 		TotalParamsB:  float64(s.ParameterCount) / 1e9,
 		ReadParamsB:   float64(s.ActiveParams) / 1e9,
 		MatmulParamsB: float64(s.ActiveParams) / 1e9,
@@ -94,4 +94,12 @@ func ModelFromGGUF(ref string) (catalog.Model, error) {
 		m.Notes = append(m.Notes, "no base model found: pass --upstream-model to choose the cloud model for a trial")
 	}
 	return m, nil
+}
+
+// readableName drops a general.name that is a content hash, not a name.
+func readableName(n string) string {
+	if len(n) >= 32 && strings.Trim(strings.ToLower(n), "0123456789abcdef") == "" {
+		return ""
+	}
+	return n
 }

@@ -19,6 +19,9 @@ func (m *Root) nextTool() string {
 	return m.cfg.Tools[(slices.Index(m.cfg.Tools, m.cfg.Preferences.Tool)+1)%len(m.cfg.Tools)]
 }
 
+// hasSim is true when a model can be tried in the cloud at simulated speed.
+func hasSim(r core.Row) bool { return r.Result.Model.OpenRouterID != "" }
+
 func toolName(id string) string {
 	if id == "generic" {
 		return "Your own agent"
@@ -66,6 +69,9 @@ func (m *Root) launcher() string {
 		}
 		if m.detection.Target.OS == "darwin" {
 			speed = estimated(choice.Reply, true) + " per reply"
+		}
+		if choice.Journal == nil && hasSim(choice.Row) {
+			state = "SIM · " + state
 		}
 		nameWidth := max(12, min(25, m.width-39))
 		line := fmt.Sprintf("%s%s %-*s %10s   %s", selection(i, m.modelIndex), mark, nameWidth, clip(choice.Row.Result.Model.Name, nameWidth), speed, state)

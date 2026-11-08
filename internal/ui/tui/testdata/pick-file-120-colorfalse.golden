@@ -1,12 +1,12 @@
 ✦ triaLM  Codex · Apple M5 · 16 GB for models
-Models · 7 of 11
-  ○ Qwen3-Coder 30B-A3B         up to 128K  ~47 t/s   12.9 GB │
-  ○ GLM-4.7-Flash               up to 64K   ~45 t/s   12.9 GB │
-  ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB │
-✓ ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB █
-  ○ Granite 4.2 8B              up to 128K  ~22 t/s   5.35 GB │
-  ○ Llama 3.1 8B Instruct       up to 128K  ~15 t/s   8.54 GB │
-  ○ Qwen3.5 4B                  up to 256K  ~38 t/s   2.74 GB │
+Models · 8 of 12
+  ○ Qwen3-Coder 30B-A3B         up to 128K  ~47 t/s   12.9 GB SIM │
+  ○ GLM-4.7-Flash               up to 64K   ~45 t/s   12.9 GB SIM │
+  ○ Gemma 4 12B                 up to 256K  ~14 t/s   7.12 GB SIM │
+✓ ○ Qwen3.5 9B                  up to 256K  ~22 t/s   5.68 GB SIM │
+  ○ Granite 4.2 8B              up to 128K  ~22 t/s   5.35 GB SIM █
+  ○ Llama 3.1 8B Instruct       up to 128K  ~15 t/s   8.54 GB SIM │
+  ○ Qwen3.5 4B                  up to 256K  ~38 t/s   2.74 GB SIM │
 
 ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Qwen  Qwen3.5 9B  estimate                                                                                         │

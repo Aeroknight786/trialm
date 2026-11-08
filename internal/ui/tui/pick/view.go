@@ -57,7 +57,7 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 	budget := strings.TrimSuffix(figure.Exact(p.Target.GPUMemBytes/(1<<30), "GB", figure.Measured, "hardware:budget").Number(), ".0") + " GB"
 	b := fmt.Sprintf("Models · %d of %d\n", index+1, len(p.Models))
 	start := min(max(0, index-3), max(0, len(p.Models)-7))
-	nameWidth := max(12, min(27, width-38))
+	nameWidth := max(12, min(27, width-42))
 	for i := start; i < min(start+7, len(p.Models)); i++ {
 		x := p.Models[i]
 		r := x.Default.Result
@@ -77,7 +77,12 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 		if x.EmptyMeasured {
 			speed = strings.TrimPrefix(speed, "~")
 		}
-		line := fmt.Sprintf("%s %s %-*s %-11s %-9s %s", cursor, style(mark, map[bool]string{true: "#3fb950", false: "#8b949e"}[x.OnDisk]), nameWidth, ansi.Truncate(r.Model.Name, nameWidth, ""), "up to "+Context(x.MaxContext), speed, size)
+		// SIM: a private cloud host runs this model, so it can be tried.
+		sim := "   "
+		if r.Model.OpenRouterID != "" {
+			sim = style("SIM", "#a855aa")
+		}
+		line := fmt.Sprintf("%s %s %-*s %-11s %-9s %-8s%s", cursor, style(mark, map[bool]string{true: "#3fb950", false: "#8b949e"}[x.OnDisk]), nameWidth, ansi.Truncate(r.Model.Name, nameWidth, ""), "up to "+Context(x.MaxContext), speed, size, sim)
 		marker := "│"
 		if i-start == min(6, index*7/max(1, len(p.Models))) {
 			marker = "█"

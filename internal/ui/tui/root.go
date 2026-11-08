@@ -313,6 +313,10 @@ func (m *Root) try(window bool) tea.Cmd {
 	if !ok {
 		return nil
 	}
+	if !hasSim(row) {
+		m.message = "No SIM for this model: no private cloud host, estimates only"
+		return nil
+	}
 	m.trialRow = &row
 	m.trialWindow = window || m.cfg.AutomaticWindow
 	m.push(First)
@@ -930,6 +934,9 @@ func (m *Root) footer() string {
 		return "⏎ Now   s Later (run trialm calibrate)   v Details"
 	case Recipes:
 		if m.cfg.Picker != nil {
+			if r, _ := m.row(); m.gridFocus && !hasSim(r) {
+				return strings.Replace(pick.GridKeys, "⏎ Try   ", "", 1)
+			}
 			if m.gridFocus {
 				return pick.GridKeys
 			}
@@ -974,7 +981,10 @@ func (m *Root) footer() string {
 		if next := m.nextTool(); next != m.cfg.Preferences.Tool {
 			hint = "    tab " + toolName(next)
 		}
-		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    t Cloud trial    / Search    ? Help"
+		if r, ok := m.row(); !ok || hasSim(r) {
+			hint += "    t Cloud trial"
+		}
+		return "⏎ Run in " + toolName(m.cfg.Preferences.Tool) + hint + "    / Search    ? Help"
 	case Summary:
 		return "⏎ Install    m Other models    q Later"
 	case Gallery:

@@ -194,3 +194,21 @@ func manyFileFixture(m *Root) {
 	cm.Grids = grids
 	cm.File = 0
 }
+
+// A model without a private cloud host shows no SIM, offers no trial key
+// and says why when t is pressed anyway.
+func TestNoSimMeansNoTrial(t *testing.T) {
+	m := fixture(t)
+	m.stack, m.detecting, m.modelIndex = []Screen{Home}, false, 2
+	if !strings.Contains(m.footer(), "t Cloud trial") || !strings.Contains(strip(m.launcher()), "SIM · ") {
+		t.Fatal(m.footer())
+	}
+	m.models[2].Row.Result.Model.OpenRouterID = ""
+	if strings.Contains(m.footer(), "t Cloud trial") || strings.Count(strip(m.launcher()), "SIM · ") != 1 {
+		t.Fatal(m.footer(), m.launcher())
+	}
+	m.Update(key("t"))
+	if m.screen() != Home || !strings.Contains(m.message, "No SIM") {
+		t.Fatal(m.screen(), m.message)
+	}
+}

@@ -200,46 +200,48 @@
     },
     {
       "rank": 5,
-      "model": "devstral-small-2:24b",
-      "model_name": "Devstral Small 2 24B",
-      "quant": "Q3_K_XL",
-      "runtime": "llamacpp",
-      "try_command": "trialm try devstral-small-2:24b --runtime llamacpp --quant Q3_K_XL --harness codex",
+      "model": "lfm2.5:24b-a2b",
+      "model_name": "LFM2.5 24B-A2B",
+      "quant": "Q4_K_M",
+      "runtime": "ollama",
+      "try_command": "trialm try lfm2.5:24b-a2b --runtime ollama --harness codex",
       "verdict": "comfortable",
       "runtime_installed": false,
       "prediction": {
         "kind": "simulated",
-        "runtime": "llamacpp",
+        "runtime": "ollama",
         "tuned": true,
-        "backend": "vulkan",
-        "quant": "Q3_K_XL",
-        "download_gb": 11.8514106,
+        "backend": "rocm",
+        "quant": "Q4_K_M",
+        "download_gb": 14.5262585,
         "context_tokens": 65536,
-        "memory_gb": 18.6560516,
+        "memory_gb": 16.7058636,
         "budget_gb": 21.0453398,
         "fit": "fits",
-        "decode_tps": 48.3466316,
-        "decode_tps_deep": 40.4163433,
-        "prefill_tps": 757.606974,
-        "cold_first_reply_s": 24.7127939,
-        "follow_up_ttft_s": 7.70423042,
-        "follow_up_turn_s": 15.1269702,
-        "session_s": 762.09452,
+        "decode_tps": 290.857432,
+        "decode_tps_deep": 218.305239,
+        "prefill_tps": 3079.73133,
+        "cold_first_reply_s": 12.3733746,
+        "follow_up_ttft_s": 1.31658708,
+        "follow_up_turn_s": 2.69080971,
+        "session_s": 138.676821,
         "cloud_session_s": 120,
-        "decode_error_range_pct": 30,
-        "prefill_error_range_pct": 65,
+        "decode_error_range_pct": 45,
+        "prefill_error_range_pct": 90,
         "no_speed_claim": false,
         "warnings": [
-          "trial stand-in: no cloud provider hosts this exact model, so trials use Devstral 2, the larger model of the same family, so trial answers are better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
         ],
         "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
+          "flash_attention=true (unverified for this version)",
+          "otherwise_tokens=262144 (unverified for this version)",
+          "overflow=truncate_oldest (unverified for this version)",
+          "swa_rollback=checkpoints (unverified for this version)"
         ],
         "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts",
-          "Use an 8-bit KV cache to fit the longer context: add -ctk q8_0 -ctv q8_0"
+          "Set the context length: OLLAMA_CONTEXT_LENGTH=65536 (or num_ctx in a Modelfile)",
+          "Keep the model loaded: OLLAMA_KEEP_ALIVE=-1",
+          "Enable flash attention: OLLAMA_FLASH_ATTENTION=1"
         ],
         "context_note": "tuned for agentic use"
       }

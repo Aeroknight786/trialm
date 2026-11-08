@@ -194,7 +194,7 @@ func PrintPrediction(output io.Writer, m catalog.Model, t predict.Target, sc pre
 		}
 		fmt.Fprintf(tw, "%s\t%s %s\t%s\t%s\t%s\t%s\t%s\t%s\n", label, r.Quant.Name, gb(float64(r.Quant.FileBytes)), ctx, fitCell(r), first, follow, writes, task)
 		for _, wn := range r.Warnings {
-			if strings.HasPrefix(wn, "quality caveat") || strings.HasPrefix(wn, "trial stand-in") || strings.Contains(wn, "no native tool calling") {
+			if strings.HasPrefix(wn, "quality caveat") || strings.HasPrefix(wn, "trial stand-in") || strings.HasPrefix(wn, "estimate only") || strings.Contains(wn, "no native tool calling") {
 				if !contains(notes, wn) {
 					notes = append(notes, wn)
 				}

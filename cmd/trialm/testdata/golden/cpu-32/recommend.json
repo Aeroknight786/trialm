@@ -4,6 +4,51 @@
   "options": [
     {
       "rank": 1,
+      "model": "lfm2.5:24b-a2b",
+      "model_name": "LFM2.5 24B-A2B",
+      "quant": "Q4_K_M",
+      "runtime": "llamacpp",
+      "try_command": "trialm try lfm2.5:24b-a2b --runtime llamacpp --harness claude-code",
+      "verdict": "usable",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "llamacpp",
+        "tuned": true,
+        "backend": "cpu",
+        "quant": "Q4_K_M",
+        "download_gb": 14.5262585,
+        "context_tokens": 57344,
+        "memory_gb": 16.3233431,
+        "budget_gb": 23.6223201,
+        "fit": "fits",
+        "decode_tps": 22.5375099,
+        "decode_tps_deep": 13.885835,
+        "prefill_tps": 137.94682,
+        "cold_first_reply_s": 169.060174,
+        "follow_up_ttft_s": 27.5171599,
+        "follow_up_turn_s": 49.1219104,
+        "session_s": 2024.98894,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 75,
+        "prefill_error_range_pct": 80,
+        "no_speed_claim": false,
+        "warnings": [
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local Q4_K_M is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+        ],
+        "assumptions": [
+          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
+          "checkpoints=8 (unverified for this version)"
+        ],
+        "tune_steps": [
+          "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
+          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 2,
       "model": "qwen3.6:35b-a3b",
       "model_name": "Qwen3.6 35B-A3B",
       "quant": "MXFP4",
@@ -49,7 +94,7 @@
       }
     },
     {
-      "rank": 2,
+      "rank": 3,
       "model": "qwen3-coder:30b",
       "model_name": "Qwen3-Coder 30B-A3B",
       "quant": "Q4_K_M",
@@ -95,7 +140,7 @@
       }
     },
     {
-      "rank": 3,
+      "rank": 4,
       "model": "glm-4.7-flash",
       "model_name": "GLM-4.7-Flash",
       "quant": "Q4_K_M",
@@ -141,7 +186,7 @@
       }
     },
     {
-      "rank": 4,
+      "rank": 5,
       "model": "gemma4:26b-a4b",
       "model_name": "Gemma 4 26B-A4B",
       "quant": "Q4_K_M",
@@ -180,51 +225,6 @@
         ],
         "tune_steps": [
           "llama-server -m \u003cmodel.gguf\u003e -c 57344 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
-        ],
-        "context_note": "tuned for agentic use"
-      }
-    },
-    {
-      "rank": 5,
-      "model": "devstral-small-2:24b",
-      "model_name": "Devstral Small 2 24B",
-      "quant": "Q4_K_M",
-      "runtime": "llamacpp",
-      "try_command": "trialm try devstral-small-2:24b --runtime llamacpp --harness claude-code",
-      "verdict": "slow",
-      "runtime_installed": false,
-      "prediction": {
-        "kind": "simulated",
-        "runtime": "llamacpp",
-        "tuned": true,
-        "backend": "cpu",
-        "quant": "Q4_K_M",
-        "download_gb": 14.3344468,
-        "context_tokens": 36864,
-        "memory_gb": 21.2598837,
-        "budget_gb": 23.6223201,
-        "fit": "fits",
-        "decode_tps": 2.48852213,
-        "decode_tps_deep": 1.70988461,
-        "prefill_tps": 15.0941352,
-        "cold_first_reply_s": 1480.44617,
-        "follow_up_ttft_s": 223.913476,
-        "follow_up_turn_s": 399.363912,
-        "session_s": 16045.5331,
-        "cloud_session_s": 120,
-        "decode_error_range_pct": 60,
-        "prefill_error_range_pct": 65,
-        "no_speed_claim": false,
-        "warnings": [
-          "trial stand-in: no cloud provider hosts this exact model, so trials use Devstral 2, the larger model of the same family, so trial answers are better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
-        ],
-        "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
-        ],
-        "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 36864 -fa on --jinja",
           "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"

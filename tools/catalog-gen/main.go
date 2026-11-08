@@ -65,6 +65,10 @@ var sources = []source{
 		[]file{{"Q4_K_M", "granite-4.2-30b-Q4_K_M.gguf"}, {"Q8_0", "granite-4.2-30b-Q8_0.gguf"}}, nil},
 	{"granite-4.2-8b", "Granite 4.2 8B", "granite4.2:8b", "ibm-granite/granite-4.2-8b", "ibm-granite/granite-4.2-8b-GGUF",
 		[]file{{"Q4_K_M", "granite-4.2-8b-Q4_K_M.gguf"}, {"Q8_0", "granite-4.2-8b-Q8_0.gguf"}}, nil},
+	// Liquid's models are hosted privately on OpenRouter by Liquid only
+	// (zero-retention list, 2026-11-08).
+	{"lfm2.5-24b-a2b", "LFM2.5 24B-A2B", "lfm2.5:24b-a2b", "liquid/lfm-2.5-24b-a2b", "LiquidAI/LFM2.5-24B-A2B-GGUF",
+		[]file{{"Q4_K_M", "LFM2.5-24B-A2B-Q4_K_M.gguf"}, {"Q8_0", "LFM2.5-24B-A2B-Q8_0.gguf"}}, nil},
 }
 
 func main() {

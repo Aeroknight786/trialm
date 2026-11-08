@@ -739,7 +739,7 @@ func buildUpstream(kind, model, keyEnv, provider string, m catalog.Model) (upstr
 			return nil, "", errors.New("--upstream-model is required with a custom upstream URL")
 		}
 		if model == "" {
-			return nil, "", errors.New("no cloud model is known for this file: pass --upstream-model <openrouter id> (e.g. its base model)")
+			return nil, "", errors.New("no private cloud host is known for this model: pass --upstream-model <openrouter id> (e.g. its base model)")
 		}
 	}
 	if keyEnv == "" {
