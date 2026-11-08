@@ -104,12 +104,14 @@ case ":$PATH:" in
     ;;
 esac
 
-# Start trialm on the terminal (stdin is the piped script, so read from
-# /dev/tty). Agents and scripts set TRIALM_NO_START=1; without a terminal
-# there is nothing to start.
-if [ "$no_start" != "1" ] && [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
+# Start trialm on the terminal. stdin is the piped script, so give it the
+# terminal's own device (/dev/ttysNNN), not /dev/tty: through /dev/tty,
+# trialm keeps reading keys after it hands the screen to an agent, and the
+# agent cannot type. Agents and scripts set TRIALM_NO_START=1.
+term=$(ps -o tty= -p $$ 2>/dev/null | tr -d ' ')
+if [ "$no_start" != "1" ] && [ -t 1 ] && [ -n "$term" ] && [ "$term" != "??" ] && [ -r "/dev/$term" ]; then
   printf '  %sstarting…%s\n\n' "$dim" "$off" >&2
-  exec "$installed" </dev/tty
+  exec "$installed" <"/dev/$term"
 fi
 if [ "$on_path" = 1 ]; then
   echo "run: trialm"
