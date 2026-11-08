@@ -129,7 +129,7 @@ func Run(args []string) error {
 		}
 		if pretty && ev.Type != "result" && ev.Type != "interrupted" {
 			if ev.Type == "start" {
-				fmt.Fprintf(os.Stderr, "✦ Calibrating this Mac · %s · no model downloads · ctrl-c keeps finished steps\n\n", calib.Remaining(total))
+				fmt.Fprint(os.Stderr, "For more accurate estimates\n\n")
 			}
 			if ev.Type == "step" && total > 0 {
 				done := int(math.Round(24 * max(0, min(1, 1-ev.ETA/total))))

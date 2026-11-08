@@ -152,7 +152,7 @@ func (m *Root) agentsBody() string {
 	return b
 }
 func (m *Root) calibrationBody() string {
-	b := m.theme.selected.Bold(true).Render(fmt.Sprintf("✦ Calibrate for Accurate Estimates | ~%d mins | No Downloads", core.CalibrationMinutes()))
+	b := m.theme.dim.Render("For more accurate estimates")
 	if m.calibration != nil {
 		// The bar is the real share of estimated time, so it agrees with "About N min left".
 		b += "\n\n" + m.spin.View() + " Calibrating\n" + m.bar.ViewAs(m.calibration.Fraction) + "\n" + m.calibration.ETA + m.theme.dim.Render(fmt.Sprintf(" · %d of %d", m.calibration.Step, len(m.calibration.Estimates)))
