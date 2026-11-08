@@ -122,10 +122,12 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 	}
 	c := f.Client
 	c.Key = key
+	credits := c.Credits
 	if trial {
 		c.BaseURL = "" // the key is OpenRouter's, wherever it came from
+		credits = c.NewKeyCredits
 	}
-	balance, err := c.Credits(ctx)
+	balance, err := credits(ctx)
 	if err != nil {
 		return err
 	}

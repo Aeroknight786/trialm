@@ -115,7 +115,7 @@ func (h *Headless) Finish(ctx context.Context, code string) error {
 // saveAuthorization checks the key against OpenRouter before keeping it,
 // with what it can spend and, from a trial sign-in, the feedback token.
 func saveAuthorization(ctx context.Context, s store.Store, g openrouter.Grant) error {
-	balance, e := (openrouter.Client{Key: g.Key}).Credits(ctx)
+	balance, e := (openrouter.Client{Key: g.Key}).NewKeyCredits(ctx)
 	if e != nil {
 		return e
 	}

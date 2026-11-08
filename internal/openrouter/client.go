@@ -74,7 +74,10 @@ func (c Client) Credits(ctx context.Context) (float64, error) {
 			LimitRemaining *float64 `json:"limit_remaining"`
 		} `json:"data"`
 	}
-	if c.Do(ctx, "GET", "/key", nil, &k) == nil && k.Data.Limit != nil && k.Data.LimitRemaining != nil {
+	if err := c.Do(ctx, "GET", "/key", nil, &k); err != nil {
+		return 0, err
+	}
+	if k.Data.Limit != nil && k.Data.LimitRemaining != nil {
 		return *k.Data.LimitRemaining, nil
 	}
 	var r struct {
@@ -197,4 +200,22 @@ func (c Client) PrivateEndpoints(ctx context.Context, id string, zdr bool) ([]En
 		}
 	}
 	return eps, nil
+}
+
+// NewKeyCredits is Credits for a key minted moments ago: OpenRouter can take
+// a few seconds to accept a new key, so it asks again for up to ~20 s.
+func (c Client) NewKeyCredits(ctx context.Context) (float64, error) {
+	var err error
+	for _, wait := range []time.Duration{0, time.Second, 2 * time.Second, 3 * time.Second, 5 * time.Second, 8 * time.Second} {
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		}
+		var v float64
+		if v, err = c.Credits(ctx); err == nil {
+			return v, nil
+		}
+	}
+	return 0, fmt.Errorf("OpenRouter did not accept the new trial key: %w", err)
 }
