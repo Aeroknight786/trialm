@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/aeroknight786/trialm/internal/calib"
 	"github.com/aeroknight786/trialm/internal/catalog"
 	"github.com/aeroknight786/trialm/internal/engine"
@@ -50,6 +51,15 @@ type ConfigPicker struct {
 	Target   predict.Target
 	Harness  harness.Harness
 	Scenario predict.Scenario
+}
+
+// Assumes says in a few words what an agent's time estimates assume.
+func Assumes(tool string, tokens int) string {
+	name := strings.TrimSuffix(harness.DisplayName(tool), " CLI")
+	if tool == "generic" {
+		name = "your agent"
+	}
+	return fmt.Sprintf("Assumes %s starts with %dK tokens; plugins add more", name, (tokens+500)/1000)
 }
 
 func gridKey(engine, cache string) string { return engine + "/" + cache }

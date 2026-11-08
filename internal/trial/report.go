@@ -30,12 +30,6 @@ type Turn struct {
 	Cancelled       bool `json:",omitempty"`
 }
 
-// Estimate is what triaLM showed before the trial and the sizes it assumed.
-type Estimate struct {
-	FirstIn, FirstOut, ReplyIn, ReplyNew, ReplyOut int
-	FirstSec, ReplySec                             float64
-}
-
 func Summarize(records []sim.Record, spend float64, fidelity string) Report {
 	r := Report{Requests: len(records), SpendUSD: max(0, spend), SpendKnown: spend >= 0, Fidelity: fidelity}
 	var turns []float64
@@ -88,9 +82,9 @@ func Summarize(records []sim.Record, spend float64, fidelity string) Report {
 	return r
 }
 
-// Lines sets what the trial took beside what triaLM estimated, so a slow
-// trial shows its cause: the prompt sizes differ, or requests waited.
-func (r Report) Lines(e *Estimate) string {
+// Lines is what the trial took, request by request, in plain text: the
+// prompt sizes and time in line explain a slow trial.
+func (r Report) Lines() string {
 	var b strings.Builder
 	row := func(label string, in, fresh, out int, time ...string) {
 		fmt.Fprintf(&b, "%-15s %-6s %-6s %-5s %s\n", label, sim.Kilo(in), sim.Kilo(fresh), sim.Kilo(out), time[0])
@@ -114,10 +108,6 @@ func (r Report) Lines(e *Estimate) string {
 	if r.FollowUpCount > 0 {
 		f := r.FollowUps
 		row(fmt.Sprintf("Follow-ups (%d)", r.FollowUpCount), f.In, f.New, f.Out, took(f, " average")...)
-	}
-	if e != nil {
-		row("Our estimate", e.FirstIn, e.FirstIn, e.FirstOut, sim.FormatDur(e.FirstSec)+" first reply")
-		row("", e.ReplyIn, e.ReplyNew, e.ReplyOut, sim.FormatDur(e.ReplySec)+" per reply")
 	}
 	if n := sim.ToolTokens(r.Tools); n > 0 {
 		fmt.Fprintf(&b, "\nTool definitions: %s of the first %s\n%s\n", sim.Kilo(n), sim.Kilo(r.First.In), sim.ToolsLine(r.Tools, 3))

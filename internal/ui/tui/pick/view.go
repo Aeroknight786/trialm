@@ -199,6 +199,7 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 		panel += dim(fmt.Sprintf("%d larger files don't fit", g.Folded)) + "\n"
 	}
 	panel += "\nSpeed   " + number(cell.Empty) + " t/s empty → " + number(cell.Speed) + " t/s at " + Context(cell.Context) + map[bool]string{true: "    First reply  ", false: "\nFirst reply  "}[width >= 76] + estimate(cell.First) + "\n"
+	panel += dim(core.Assumes(p.Harness.ID, p.Scenario.BasePromptTokens)) + "\n"
 	fraction := cell.Memory.V / max(1, p.Target.GPUMemBytes/(1<<30))
 	full := min(20, max(0, int(math.Round(20*fraction))))
 	text := cell.Memory.Number() + " of " + budget

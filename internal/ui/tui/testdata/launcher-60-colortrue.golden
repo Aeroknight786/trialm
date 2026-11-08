@@ -6,6 +6,7 @@
 set up[m
   [90m  ○ gpt-oss 20B           ~17 s per reply   12.0 GB · not
 on disk[m
+  [90mAssumes Codex starts with 9K tokens; plugins add more[m
 
   [35m  ✦ Find something faster or smarter[m
 

@@ -11,19 +11,17 @@ import (
 
 // TrialEntry keeps the card after a child trial returns the terminal.
 type TrialEntry struct {
-	Context int          `json:"context,omitempty"`
-	KV      string       `json:"kv,omitempty"`
-	ID      string       `json:"id"`
-	At      time.Time    `json:"at"`
-	Model   string       `json:"model"`
-	Quant   string       `json:"quant"`
-	Runtime string       `json:"runtime"`
-	Band    int          `json:"band"`
-	Rating  int          `json:"rating"`
-	Report  trial.Report `json:"report"`
-	// Estimate is what triaLM showed before the trial, kept for the summary.
-	Estimate   *trial.Estimate `json:"estimate,omitempty"`
-	Incomplete bool            `json:"incomplete,omitempty"`
+	Context    int          `json:"context,omitempty"`
+	KV         string       `json:"kv,omitempty"`
+	ID         string       `json:"id"`
+	At         time.Time    `json:"at"`
+	Model      string       `json:"model"`
+	Quant      string       `json:"quant"`
+	Runtime    string       `json:"runtime"`
+	Band       int          `json:"band"`
+	Rating     int          `json:"rating"`
+	Report     trial.Report `json:"report"`
+	Incomplete bool         `json:"incomplete,omitempty"`
 }
 
 func (s Store) History() ([]TrialEntry, error) {

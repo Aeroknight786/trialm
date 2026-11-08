@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"github.com/aeroknight786/trialm/internal/core"
+	"github.com/aeroknight786/trialm/internal/harness"
 	"github.com/aeroknight786/trialm/internal/hw"
 	"github.com/aeroknight786/trialm/internal/openrouter"
 	"github.com/aeroknight786/trialm/internal/setup"
@@ -88,9 +89,10 @@ type pickerMsg struct {
 	err    error
 }
 type modelsMsg struct {
-	tool string
-	rows []core.ModelChoice
-	err  error
+	tool  string
+	start int
+	rows  []core.ModelChoice
+	err   error
 }
 type sparkleMsg int
 type detectedMsg struct {
@@ -116,6 +118,7 @@ type windowDoneMsg struct{ err error }
 
 // Root owns every screen and sub-model for the entire interactive session.
 type Root struct {
+	start                         int // tokens the agent's estimates assume it sends first
 	otherModels                   []hw.ModelServer
 	gridFocus                     bool
 	picker                        core.ConfigPicker
@@ -262,7 +265,8 @@ func (m *Root) loadModels() tea.Cmd {
 	d, p := m.detection, m.cfg.Preferences
 	return func() tea.Msg {
 		rows, e := m.cfg.Models(m.cfg.Context, d, p)
-		return modelsMsg{rows: rows, err: e, tool: p.Tool}
+		h, _ := harness.Get(p.Tool)
+		return modelsMsg{rows: rows, err: e, tool: p.Tool, start: h.Scenario.BasePromptTokens}
 	}
 }
 func (m *Root) tick() tea.Cmd {
@@ -429,7 +433,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.detecting = false
 		if v.err == nil {
-			m.models = v.rows
+			m.models, m.start = v.rows, v.start
 		}
 		if m.firstRun && m.screen() == Detect && v.err == nil {
 			for _, x := range v.rows {

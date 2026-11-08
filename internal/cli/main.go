@@ -611,9 +611,7 @@ func cmdServe(args []string, try bool) error {
 		trialID = strconv.FormatInt(time.Now().UnixNano(), 36)
 	}
 	trialAt := time.Now()
-	entry := store.TrialEntry{ID: trialID, At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID, Context: res.Settings.ContextTokens, KV: res.Settings.KVCacheType, Band: max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct),
-		// The follow-up prompt is the scenario's depth plus its new tokens.
-		Estimate: &trial.Estimate{FirstIn: sc.BasePromptTokens, FirstOut: sc.OutputTokensPerTurn, FirstSec: res.Scenario.ColdFirstReply.Seconds(), ReplyIn: res.Scenario.DecodeDepth - sc.OutputTokensPerTurn/2, ReplyNew: sc.NewTokensPerTurn, ReplyOut: sc.OutputTokensPerTurn, ReplySec: res.Scenario.FollowUpTurn.Seconds()}}
+	entry := store.TrialEntry{ID: trialID, At: trialAt, Model: m.OllamaTag, Quant: res.Quant.Name, Runtime: prof.ID, Context: res.Settings.ContextTokens, KV: res.Settings.KVCacheType, Band: max(res.Accuracy.DecodePct, res.Accuracy.PrefillPct)}
 	srv := server.New(server.Config{
 		TrialSummary: func(records []sim.Record) string {
 			spend := -1.0

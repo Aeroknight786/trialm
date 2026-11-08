@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/harness"
 )
 
@@ -72,6 +73,9 @@ func (m *Root) launcher() string {
 			style = style.Background(lipgloss.Color("#182b30"))
 		}
 		b += "  " + style.Render(line) + "\n"
+	}
+	if m.detection.Target.OS == "darwin" && m.start > 0 {
+		b += "  " + m.theme.dim.Render(core.Assumes(m.cfg.Preferences.Tool, m.start)) + "\n"
 	}
 	b += "\n  " + m.theme.cloud.Render(selection(len(m.models), m.modelIndex)+"✦ Find something faster or smarter")
 	if m.notice != "" {

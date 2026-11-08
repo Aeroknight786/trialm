@@ -28,6 +28,7 @@ func setupFrame(m *Root) {
 		m.models[i].Reply = metric(m.models[i].Row.Result, m.models[i].Row.Result.Scenario.FollowUpTurn.Seconds(), "s", false)
 	}
 	m.models[1].Row.LocalPath = "/fixture/model.gguf"
+	m.start = m.picker.Scenario.BasePromptTokens
 	m.models = append(m.models, core.ModelChoice{Row: m.listing.Rows[2], Reply: metric(m.listing.Rows[2].Result, m.listing.Rows[2].Result.Scenario.FollowUpTurn.Seconds(), "s", false), Speed: figure.Band(26, 30, "tok/s", figure.Simulated, "prediction"), Download: figure.Bytes(12000000000, "catalog")})
 }
 func TestSetupEventsAndPause(t *testing.T) {

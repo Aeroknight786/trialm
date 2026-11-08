@@ -44,7 +44,7 @@ func (m *Root) summaryBody() string {
 	if r.SpendKnown {
 		cost = "Cost $" + fmt.Sprintf("%.2f", r.SpendUSD)
 	}
-	b := "Your trial of " + name + "\n\n" + r.Lines(m.last.Estimate) + "\n" + cost + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\nInstall? " + size.String()
+	b := "Your trial of " + name + "\n\n" + r.Lines() + "\n" + cost + "\n\nHow did it feel?\n1 Too slow    2 Fine    3 Great\n\nInstall? " + size.String()
 	if m.expanded {
 		b += "\n" + r.Plain(m.last.Band)
 	}

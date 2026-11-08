@@ -19,6 +19,7 @@ Models · 1 of 11
 │ 5 larger files don't fit                                                                                           │
 │                                                                                                                    │
 │ Speed   ~48 t/s empty → ~15 t/s at 64K    First reply  ~18 s                                                       │
+│ Assumes Codex starts with 9K tokens; plugins add more                                                              │
 │ Memory  ██████████████████░░  14.2 of 16 GB                                                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
