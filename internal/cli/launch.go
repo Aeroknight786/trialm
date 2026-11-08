@@ -14,6 +14,8 @@ import (
 	"github.com/aeroknight786/trialm/internal/setup"
 	"github.com/aeroknight786/trialm/internal/setup/proc"
 	"github.com/aeroknight786/trialm/internal/store"
+	"github.com/aeroknight786/trialm/internal/terminal"
+	"github.com/aeroknight786/trialm/internal/ui"
 	"github.com/aeroknight786/trialm/internal/ui/window"
 )
 
@@ -139,6 +141,10 @@ func cmdLaunch(args []string) error {
 		fmt.Fprint(out(), w.Render())
 		return emit("result", map[string]any{"env": l.Wiring.Env, "command": l.Wiring.Command})
 	}
+	if *serve && (tool == "generic" || tool == "") {
+		ui.OwnAgentCard(out(), l.Journal.Plan.ModelName, l.Journal.Plan.LocalModelName, l.Endpoint)
+		return server.Meter(commandContext, out(), l.Bridge, terminal.IsTTY(os.Stdout))
+	}
 	if *serve {
 		h, _ := harness.Get(tool)
 		snippet, err := h.Snippet(harness.Options{Model: l.Journal.Plan.LocalModelName, ContextTokens: l.Journal.Plan.ContextTokens, Home: executor.Root}, l.Endpoint)
@@ -153,7 +159,7 @@ func cmdLaunch(args []string) error {
 			fmt.Fprintln(out(), content)
 		}
 		fmt.Fprintln(out(), "Local route", l.Endpoint, "· ctrl-c stops the route · engine stays warm 15 min")
-		return server.Meter(commandContext, out(), l.Bridge)
+		return server.Meter(commandContext, out(), l.Bridge, terminal.IsTTY(os.Stdout))
 	}
 	if !*printOnly && !*serve && !*stop && !*check && !*here && (*win || autoWindow()) {
 		_ = emit("launch", map[string]any{"started": true, "engine": l.Journal.Plan.Runtime, "endpoint": l.Endpoint, "command": l.Wiring.Command, "env": l.Wiring.Env})
