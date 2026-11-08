@@ -23,6 +23,11 @@ case "$arch" in
   *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 
+# Say something the moment the command runs; the download shows a bar.
+if [ -t 2 ]; then mark=$(printf '\033[1;36m✦ triaLM\033[0m'); dim=$(printf '\033[90m'); off=$(printf '\033[0m'); bar="--progress-bar"; else mark="✦ triaLM"; dim=""; off=""; bar="-s"; fi
+case "$os-$arch" in darwin-arm64) where="Apple Silicon Mac" ;; darwin-*) where="Intel Mac" ;; *) where="Linux $arch" ;; esac
+printf '%s  %sinstalling for %s%s\n' "$mark" "$dim" "$where" "$off" >&2
+
 name="trialm_${os}_${arch}.tar.gz"
 if [ "$version" = latest ]; then
   base="https://github.com/$repo/releases/latest/download"
@@ -35,7 +40,9 @@ cleanup() { [ -n "$tmp" ] && [ -d "$tmp" ] && rm -rf -- "$tmp"; }
 trap cleanup EXIT
 
 installed=""
-if curl -fsSL -o "$tmp/$name" "$base/$name" 2>/dev/null && curl -fsSL -o "$tmp/checksums.txt" "$base/checksums.txt" 2>/dev/null; then
+# GitHub's download servers sometimes stall: time out, retry, never hang.
+fetch() { curl -fL --connect-timeout 10 --retry 3 --retry-delay 1 --speed-limit 2048 --speed-time 15 "$@"; }
+if fetch -sS --max-time 30 -o "$tmp/checksums.txt" "$base/checksums.txt" && fetch $bar -o "$tmp/$name" "$base/$name"; then
   expected=$(grep " $name\$" "$tmp/checksums.txt" | awk '{print $1}')
   if command -v sha256sum >/dev/null 2>&1; then
     actual=$(sha256sum "$tmp/$name" | awk '{print $1}')
@@ -71,7 +78,7 @@ else
   exit 1
 fi
 
-echo "installed $installed ($("$installed" version))"
+printf '  ✓ %s  %s%s%s\n' "$("$installed" version)" "$dim" "$installed" "$off" >&2
 
 # cyrlm is now triaLM: an old cyrlm binary here becomes a shim, so old
 # commands and setups keep working for one release.
@@ -101,7 +108,7 @@ esac
 # /dev/tty). Agents and scripts set TRIALM_NO_START=1; without a terminal
 # there is nothing to start.
 if [ "$no_start" != "1" ] && [ -t 1 ] && (: </dev/tty) 2>/dev/null; then
-  echo
+  printf '  %sstarting…%s\n\n' "$dim" "$off" >&2
   exec "$installed" </dev/tty
 fi
 if [ "$on_path" = 1 ]; then
