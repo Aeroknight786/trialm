@@ -130,8 +130,9 @@ func saveAuthorization(ctx context.Context, s store.Store, g openrouter.Grant) e
 	return s.Write("credits.json", figure.Exact(balance, "USD", figure.Measured, "openrouter:/key"))
 }
 
-// Explain says why a sign-in did not finish and what to do instead.
-func Explain(err error, trial bool) string {
+// Explain says why a sign-in did not finish and what to do instead; own
+// names the way to use one's own OpenRouter key ("press o", or a command).
+func Explain(err error, trial bool, own string) string {
 	if !trial {
 		return "Could not connect OpenRouter. Press p to paste a key or try again."
 	}
@@ -139,13 +140,13 @@ func Explain(err error, trial bool) string {
 	errors.As(err, &e)
 	switch e {
 	case "trial_used":
-		return "Your $1 of free trial credit is used up. Set the model up locally (free), or press o to use your own OpenRouter key."
+		return "Your $1 of free trial credit is used up. Set the model up locally (free), or " + own + " to use your own OpenRouter key."
 	case "capacity":
-		return "Free trials are full right now. Press o to use your own OpenRouter key."
+		return "Free trials are full right now. " + strings.ToUpper(own[:1]) + own[1:] + " to use your own OpenRouter key."
 	case "trials_paused":
-		return "Free trials are paused right now. Press o to use your own OpenRouter key."
+		return "Free trials are paused right now. " + strings.ToUpper(own[:1]) + own[1:] + " to use your own OpenRouter key."
 	}
-	return "Free trial sign-in did not finish. Press enter to try again, or o to use your own OpenRouter key."
+	return "Free trial sign-in did not finish. Try again, or " + own + " to use your own OpenRouter key."
 }
 
 // SendFeedback posts one note the user chose to send to the trial site,

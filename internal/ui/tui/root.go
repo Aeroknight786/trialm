@@ -520,7 +520,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.back()
 				m.password = nil
 			}
-			m.message = signin.Explain(v.err, m.trialSignIn)
+			m.message = signin.Explain(v.err, m.trialSignIn, "press o")
 			return m, nil
 		}
 		if m.cfg.DirectArgs != nil {

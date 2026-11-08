@@ -53,11 +53,11 @@ func TestExplainSignInStops(t *testing.T) {
 		errors.New("dial tcp: no route"):        "did not finish",
 	}
 	for err, want := range cases {
-		if got := Explain(err, true); !strings.Contains(got, want) || !strings.Contains(got, "o to use your own OpenRouter key") {
+		if got := Explain(err, true, "press o"); !strings.Contains(got, want) || !strings.Contains(strings.ToLower(got), "press o to use your own openrouter key") {
 			t.Fatal(err, got)
 		}
 	}
-	if got := Explain(errors.New("x"), false); !strings.Contains(got, "OpenRouter") {
+	if got := Explain(errors.New("x"), false, "press o"); !strings.Contains(got, "OpenRouter") {
 		t.Fatal(got)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/aeroknight786/trialm/internal/core"
 	"github.com/aeroknight786/trialm/internal/figure"
 	"github.com/aeroknight786/trialm/internal/openrouter"
+	"github.com/aeroknight786/trialm/internal/signin"
 	"github.com/aeroknight786/trialm/internal/store"
 	"io"
 	"net/url"
@@ -104,6 +105,9 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 			fmt.Fprintln(f.Output, map[bool]string{true: "Sign in with GitHub or Google in your browser.", false: "Authorize triaLM in your browser."}[trial])
 			code, err = callback.Wait(ctx)
 		}
+		if err != nil && trial {
+			return errors.New(signin.Explain(err, true, "run `trialm key --own`"))
+		}
 		if err != nil {
 			return err
 		}
@@ -136,6 +140,6 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 		}
 	}
 	credit := figure.Exact(balance, "USD", figure.Measured, "openrouter:/credits")
-	fmt.Fprintln(f.Output, map[bool]string{true: "Signed in ·", false: "OpenRouter ready ·"}[trial], credit.String(), map[bool]string{true: "of free trial credit", false: "credit"}[trial])
+	fmt.Fprintln(f.Output, map[bool]string{true: "Signed in · $" + fmt.Sprintf("%.2f", balance) + " of free trial credit", false: "OpenRouter ready · " + credit.String() + " credit"}[trial])
 	return f.Emit("result", map[string]any{"key_configured": true, "balance": credit}, core.Next{Cmd: "trialm find --json", Why: "find a model"})
 }
