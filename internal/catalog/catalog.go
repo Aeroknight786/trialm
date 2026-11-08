@@ -142,6 +142,9 @@ type Model struct {
 	NativeCtx int
 	Tools     bool
 	Thinking  bool
+	// NotForCoding is set when the model's maker does not recommend it for
+	// coding: it is listed, but ranked after every other model for agents.
+	NotForCoding bool `json:",omitempty"`
 
 	// Quants, default first.
 	Quants []Quant

@@ -46,7 +46,7 @@ func TestSessionSeamAndRequirements(t *testing.T) {
 		t.Fatal("download cap ignored", listing, err)
 	}
 	o.MaxDownloadGB = 100
-	o.Priority = "speed"
+	o.Priority = "speed" // top 5 leaves out the not-for-coding models, which come last even here
 	listing, err = s.Find(context.Background(), o, d.Target, h.Scenario, h, "", 5)
 	if err != nil {
 		t.Fatal(err)
@@ -109,5 +109,32 @@ func TestEightBitRequirement(t *testing.T) {
 		if quantBits(r.Result.Quant.Name) < 8 {
 			t.Fatal(r.Result.Quant)
 		}
+	}
+}
+
+// Models whose makers say they are not for coding stay in the list for
+// agents, but after every other model, even when they are the fastest.
+func TestNotForCodingListedLast(t *testing.T) {
+	s := Session{}
+	o := Options{Device: "RTX 4090", RAM: 64, Runtime: "all", Tuned: true}
+	d, err := s.Detect(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, _ := harness.Get("claude-code")
+	l, err := s.Find(context.Background(), o, d.Target, h.Scenario, h, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed, after := 0, false
+	for _, r := range l.Rows {
+		if r.Result.Model.NotForCoding {
+			listed, after = listed+1, true
+		} else if after {
+			t.Fatal("a coding model is ranked below", r.Result.Model.ID)
+		}
+	}
+	if listed != 2 || l.Rows[0].Result.Model.NotForCoding {
+		t.Fatal("want both small LFMs listed, never first", listed)
 	}
 }

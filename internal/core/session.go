@@ -110,6 +110,9 @@ func (s Session) Find(ctx context.Context, o Options, t predict.Target, sc predi
 	}
 	sort.SliceStable(out.Rows, func(i, j int) bool {
 		a, b := out.Rows[i].Result, out.Rows[j].Result
+		if a.Model.NotForCoding != b.Model.NotForCoding && o.Use != "chat" {
+			return b.Model.NotForCoding
+		}
 		switch o.Priority {
 		case "speed":
 			return a.Scenario.Session < b.Scenario.Session

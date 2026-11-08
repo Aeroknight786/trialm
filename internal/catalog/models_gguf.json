@@ -769,5 +769,120 @@
       "geometry and file sizes read from the GGUF headers in LiquidAI/LFM2.5-24B-A2B-GGUF",
       "hybrid model: 30 of 40 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 10 layers"
     ]
+  },
+  {
+    "ID": "lfm2.5-8b-a1b",
+    "Name": "LFM2.5 8B-A1B",
+    "OllamaTag": "lfm2.5:8b-a1b",
+    "Aliases": null,
+    "Family": "lfm2moe",
+    "TotalParamsB": 8.467856832,
+    "ReadParamsB": 1.685667264,
+    "MatmulParamsB": 1.685667264,
+    "MoE": true,
+    "ExpertsTotal": 32,
+    "ExpertsActive": 4,
+    "Layers": 24,
+    "FullAttnLayers": 6,
+    "SWALayers": 0,
+    "SWAWindow": 0,
+    "KVHeads": 8,
+    "HeadDim": 64,
+    "QHeads": 32,
+    "RecurrentLayers": 18,
+    "KVPerTokenF16": 12288,
+    "SWAKVPerTokenF16": 0,
+    "RecurrentStateBytes": 294912,
+    "Generated": true,
+    "UpstreamUnverified": true,
+    "TrialStandIn": "",
+    "DecodeEff": 0,
+    "NativeCtx": 128000,
+    "Tools": true,
+    "Thinking": true,
+    "NotForCoding": true,
+    "Quants": [
+      {
+        "Name": "Q4_K_M",
+        "Format": "gguf",
+        "FileBytes": 5155564768,
+        "ReadBytesPerToken": 1067415296,
+        "Estimated": false
+      },
+      {
+        "Name": "Q8_0",
+        "Format": "gguf",
+        "FileBytes": 9010195680,
+        "ReadBytesPerToken": 1795880704,
+        "Estimated": false
+      }
+    ],
+    "OpenRouterID": "",
+    "CloudPrecision": "provider-dependent",
+    "QuantMatchesCloud": false,
+    "HFGGUFRepo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+    "HFMLXRepo": "",
+    "Notes": [
+      "geometry and file sizes read from the GGUF headers in LiquidAI/LFM2.5-8B-A1B-GGUF",
+      "no cloud provider hosts this model: estimates only, no trial",
+      "hybrid model: 18 of 24 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 6 layers"
+    ]
+  },
+  {
+    "ID": "lfm3-1.7b",
+    "Name": "LFM3 1.7B",
+    "OllamaTag": "lfm3:1.7b",
+    "Aliases": null,
+    "Family": "lfm3",
+    "TotalParamsB": 1.7288016,
+    "ReadParamsB": 1.7288016,
+    "MatmulParamsB": 1.7288016,
+    "MoE": false,
+    "ExpertsTotal": 0,
+    "ExpertsActive": 0,
+    "Layers": 24,
+    "FullAttnLayers": 6,
+    "SWALayers": 5,
+    "SWAWindow": 256,
+    "KVHeads": 4,
+    "HeadDim": 128,
+    "QHeads": 16,
+    "RecurrentLayers": 13,
+    "KVPerTokenF16": 12288,
+    "SWAKVPerTokenF16": 10240,
+    "RecurrentStateBytes": 638976,
+    "Generated": true,
+    "UpstreamUnverified": true,
+    "TrialStandIn": "",
+    "DecodeEff": 0,
+    "NativeCtx": 262144,
+    "Tools": true,
+    "Thinking": true,
+    "NotForCoding": true,
+    "Quants": [
+      {
+        "Name": "Q4_K_M",
+        "Format": "gguf",
+        "FileBytes": 1099627808,
+        "ReadBytesPerToken": 1091380480,
+        "Estimated": false
+      },
+      {
+        "Name": "Q8_0",
+        "Format": "gguf",
+        "FileBytes": 1846238496,
+        "ReadBytesPerToken": 1837991168,
+        "Estimated": false
+      }
+    ],
+    "OpenRouterID": "liquid/lfm-3-1.7b",
+    "CloudPrecision": "provider-dependent",
+    "QuantMatchesCloud": false,
+    "HFGGUFRepo": "LiquidAI/LFM3-1.7B-GGUF",
+    "HFMLXRepo": "",
+    "Notes": [
+      "geometry and file sizes read from the GGUF headers in LiquidAI/LFM3-1.7B-GGUF",
+      "hybrid model: 13 of 24 layers are linear-attention/recurrent with a fixed-size state, so the KV cache grows only on 6 layers"
+    ]
   }
 ]

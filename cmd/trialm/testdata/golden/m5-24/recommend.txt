@@ -9,7 +9,7 @@ Best local models for Claude Code on what-if: Apple M5 (10-core GPU), 24 GB unif
 5  gemma4:12b       llama.cpp (llama-server)  Q4_K_M 7.1 GB      1 min 31 s   46 s       30 min 53 s  usable
 
 * TASK = a 40-call agent task (cloud: ~2 min 00 s). Tuned settings. ● = runtime installed. More options: --top 20
-Ranked by speed tier, then model size (a rough capability proxy — triaLM does not score coding quality; try the top picks).
+Ranked by speed tier, then model size (a rough capability proxy — triaLM does not score coding quality; try the top picks). Models their makers do not recommend for coding come last.
 Each model shows the file that runs best here: its usual 4-bit file when that is fast, else a smaller 3-bit file (more mistakes; see the quality caveat in `trialm predict`).
 Try #1: trialm try qwen3.6:35b-a3b --runtime llamacpp --quant IQ3_XXS --harness claude-code
 

@@ -104,7 +104,7 @@ func cmdRecommend(args []string) error {
 				Quant: row.Result.Quant.Name, Runtime: row.Result.Runtime.ID, TryCmd: tryCmd(row.Result, hh.ID),
 				Installed: in.Has(row.Result.Runtime.ID), Result: jsonResults([]predict.Result{row.Result})[0]})
 		}
-		return printJSON(map[string]any{"machine": t.Name, "harness": hh.ID, "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score", "options": out})
+		return printJSON(map[string]any{"machine": t.Name, "harness": hh.ID, "ranking": "speed tier (comfortable/usable/slow), then model size as a capability proxy — not a coding-quality score; models their makers do not recommend for coding come last", "options": out})
 	}
 	fmt.Fprintf(out(), "\nBest local models for %s on %s\n\n", hh.Name, t.Name)
 	w := tabwriter.NewWriter(out(), 0, 0, 2, ' ', 0)
@@ -136,7 +136,7 @@ func cmdRecommend(args []string) error {
 		fmt.Fprintln(out(), "\n⚠ None of these will feel usable in a coding agent on this machine: every first reply takes minutes. A machine with a GPU or Apple Silicon makes a large difference.")
 	}
 	fmt.Fprintf(out(), "\n* TASK = a %d-call agent task (cloud: ~%s). Tuned settings. ● = runtime installed. More options: --top 20\n", sc.Turns, dur(rows[0].Result.Scenario.CloudSession))
-	fmt.Fprintln(out(), "Ranked by speed tier, then model size (a rough capability proxy — triaLM does not score coding quality; try the top picks).")
+	fmt.Fprintln(out(), "Ranked by speed tier, then model size (a rough capability proxy — triaLM does not score coding quality; try the top picks). Models their makers do not recommend for coding come last.")
 	fmt.Fprintln(out(), "Each model shows the file that runs best here: its usual 4-bit file when that is fast, else a smaller 3-bit file (more mistakes; see the quality caveat in `trialm predict`).")
 	fmt.Fprintf(out(), "Try #1: %s\n\n", tryCmd(rows[0].Result, hh.ID))
 	return nil

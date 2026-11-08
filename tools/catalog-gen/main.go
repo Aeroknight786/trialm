@@ -36,6 +36,10 @@ var trialStandIns = map[string]string{
 	"granite-4.2-30b":      "Granite 4.2 8B, a smaller model of the same family, so trial answers are weaker than the local model",
 }
 
+// notForCoding are models whose model cards do not recommend them for
+// coding (checked 2026-11-08): listed, never a top pick for agents.
+var notForCoding = map[string]bool{"lfm2.5-8b-a1b": true, "lfm3-1.7b": true}
+
 // Sources: popular local-size models from major labs (Hugging Face
 // download rankings, November 2026). OpenRouter ids are best guesses.
 var sources = []source{
@@ -66,9 +70,13 @@ var sources = []source{
 	{"granite-4.2-8b", "Granite 4.2 8B", "granite4.2:8b", "ibm-granite/granite-4.2-8b", "ibm-granite/granite-4.2-8b-GGUF",
 		[]file{{"Q4_K_M", "granite-4.2-8b-Q4_K_M.gguf"}, {"Q8_0", "granite-4.2-8b-Q8_0.gguf"}}, nil},
 	// Liquid's models are hosted privately on OpenRouter by Liquid only
-	// (zero-retention list, 2026-11-08).
+	// (zero-retention list, 2026-11-08); LFM2.5 8B-A1B has no cloud host.
 	{"lfm2.5-24b-a2b", "LFM2.5 24B-A2B", "lfm2.5:24b-a2b", "liquid/lfm-2.5-24b-a2b", "LiquidAI/LFM2.5-24B-A2B-GGUF",
 		[]file{{"Q4_K_M", "LFM2.5-24B-A2B-Q4_K_M.gguf"}, {"Q8_0", "LFM2.5-24B-A2B-Q8_0.gguf"}}, nil},
+	{"lfm2.5-8b-a1b", "LFM2.5 8B-A1B", "lfm2.5:8b-a1b", "", "LiquidAI/LFM2.5-8B-A1B-GGUF",
+		[]file{{"Q4_K_M", "LFM2.5-8B-A1B-Q4_K_M.gguf"}, {"Q8_0", "LFM2.5-8B-A1B-Q8_0.gguf"}}, []string{"no cloud provider hosts this model: estimates only, no trial"}},
+	{"lfm3-1.7b", "LFM3 1.7B", "lfm3:1.7b", "liquid/lfm-3-1.7b", "LiquidAI/LFM3-1.7B-GGUF",
+		[]file{{"Q4_K_M", "LFM3-1.7B-Q4_K_M.gguf"}, {"Q8_0", "LFM3-1.7B-Q8_0.gguf"}}, nil},
 }
 
 func main() {
@@ -99,7 +107,7 @@ func open(repo, name string) (*gguf.File, error) {
 
 func build(src source) (catalog.Model, error) {
 	m := catalog.Model{
-		ID: src.id, Name: src.name, OllamaTag: src.tag, OpenRouterID: src.openrouter, TrialStandIn: trialStandIns[src.id], HFGGUFRepo: src.repo,
+		ID: src.id, Name: src.name, OllamaTag: src.tag, OpenRouterID: src.openrouter, TrialStandIn: trialStandIns[src.id], NotForCoding: notForCoding[src.id], HFGGUFRepo: src.repo,
 		CloudPrecision: "provider-dependent", Generated: true, UpstreamUnverified: true,
 		Notes: append([]string{"geometry and file sizes read from the GGUF headers in " + src.repo}, src.notes...),
 	}

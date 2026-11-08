@@ -235,6 +235,9 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 	}
 	sort.SliceStable(l.Rows, func(i, j int) bool {
 		a, b := l.Rows[i], l.Rows[j]
+		if a.Result.Model.NotForCoding != b.Result.Model.NotForCoding && p.Use != "chat" {
+			return b.Result.Model.NotForCoding
+		}
 		if p.Priority == "speed" {
 			return a.Result.Scenario.Session < b.Result.Scenario.Session
 		}
