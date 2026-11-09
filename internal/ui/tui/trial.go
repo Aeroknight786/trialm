@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"charm.land/lipgloss/v2"
 	"fmt"
 	"github.com/aeroknight786/trialm/internal/catalog"
 	"github.com/aeroknight786/trialm/internal/core"
@@ -63,26 +62,4 @@ func (m *Root) summaryBody() string {
 		b += "\n" + r.Plain(m.last.Band)
 	}
 	return b
-}
-func (m *Root) tiles(labels, values, sub []string) string {
-	var rows []string
-	width := max(12, (m.width-2)/len(labels))
-	for i, label := range labels {
-		text := wrap(label, width-2) + "\n" + wrap(values[i], width-2)
-		if i < len(sub) {
-			text += "\n" + wrap(sub[i], width-2)
-		}
-		rows = append(rows, text)
-	}
-	return joinTiles(rows, width)
-}
-func joinTiles(rows []string, width int) string {
-	height := 0
-	for _, r := range rows {
-		height = max(height, lipgloss.Height(r))
-	}
-	for i, r := range rows {
-		rows[i] = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(width).Height(height + 2).Render(r)
-	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, rows...)
 }
