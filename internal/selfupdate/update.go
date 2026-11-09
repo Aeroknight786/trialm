@@ -29,6 +29,7 @@ const Latest = "https://api.github.com/repos/Aeroknight786/trialm/releases/lates
 type Asset struct {
 	Name string `json:"name"`
 	URL  string `json:"browser_download_url"`
+	API  string `json:"url"` // serves the file when the plain link fails (504s for hours)
 }
 type Release struct {
 	Version string  `json:"tag_name"`
@@ -40,13 +41,21 @@ type Client struct {
 	OS, Arch  string
 }
 
-func (c Client) get(ctx context.Context, u string, limit int64) ([]byte, error) {
+// download fetches a release file, through the API if the plain link fails.
+func (c Client) download(ctx context.Context, a Asset, limit int64) ([]byte, error) {
+	b, err := c.get(ctx, a.URL, "application/vnd.github+json", limit)
+	if err != nil && a.API != "" {
+		b, err = c.get(ctx, a.API, "application/octet-stream", limit)
+	}
+	return b, err
+}
+func (c Client) get(ctx context.Context, u, accept string, limit int64) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "triaLM updater")
-	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Accept", accept)
 	hc := c.HTTP
 	if hc == nil {
 		hc = &http.Client{Timeout: 45 * time.Second}
@@ -70,7 +79,7 @@ func (c Client) Check(ctx context.Context) (Release, error) {
 	if u == "" {
 		u = Latest
 	}
-	b, err := c.get(ctx, u, 1<<20)
+	b, err := c.get(ctx, u, "application/vnd.github+json", 1<<20)
 	var r Release
 	if err != nil {
 		return r, err
@@ -134,24 +143,24 @@ func (c Client) Install(ctx context.Context, r Release, target string) error {
 	}
 	stem := "trialm_" + goos + "_" + arch
 	name := stem + ext
-	var archiveURL, sumsURL string
+	var archive, sums Asset
 	for _, a := range r.Assets {
 		if a.Name == name {
-			archiveURL = a.URL
+			archive = a
 		}
 		if a.Name == "checksums.txt" {
-			sumsURL = a.URL
+			sums = a
 		}
 	}
-	if archiveURL == "" || sumsURL == "" {
+	if archive.URL == "" || sums.URL == "" {
 		return fmt.Errorf("release lacks %s or checksums.txt", name)
 	}
-	sums, err := c.get(ctx, sumsURL, 1<<20)
+	sumsBody, err := c.download(ctx, sums, 1<<20)
 	if err != nil {
 		return err
 	}
 	var want string
-	for _, line := range strings.Split(string(sums), "\n") {
+	for _, line := range strings.Split(string(sumsBody), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) == 2 && strings.TrimPrefix(fields[1], "*") == name {
 			if want != "" {
@@ -163,15 +172,15 @@ func (c Client) Install(ctx context.Context, r Release, target string) error {
 	if raw, err := hex.DecodeString(want); err != nil || len(raw) != sha256.Size {
 		return fmt.Errorf("release checksum is missing or invalid")
 	}
-	archive, err := c.get(ctx, archiveURL, 64<<20)
+	archiveBody, err := c.download(ctx, archive, 64<<20)
 	if err != nil {
 		return err
 	}
-	got := fmt.Sprintf("%x", sha256.Sum256(archive))
+	got := fmt.Sprintf("%x", sha256.Sum256(archiveBody))
 	if got != want {
 		return fmt.Errorf("sha256 mismatch for %s", name)
 	}
-	payload, err := extract(archive, stem+"/"+binary, ext)
+	payload, err := extract(archiveBody, stem+"/"+binary, ext)
 	if err != nil {
 		return err
 	}
