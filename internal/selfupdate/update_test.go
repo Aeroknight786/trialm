@@ -64,8 +64,14 @@ func TestVerifiedUpdateUsesTemporaryTarget(t *testing.T) {
 				fake = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
 					case "/latest":
-						_ = json.NewEncoder(w).Encode(Release{Version: "v0.3.0", Assets: []Asset{{name, fake.URL + "/binary"}, {"checksums.txt", fake.URL + "/sums"}}})
-					case "/binary":
+						_ = json.NewEncoder(w).Encode(Release{Version: "v0.3.0", Assets: []Asset{{Name: name, URL: fake.URL + "/binary", API: fake.URL + "/api/binary"}, {Name: "checksums.txt", URL: fake.URL + "/sums"}}})
+					case "/binary": // github.com's plain link failing, as it did for v0.5.6
+						w.WriteHeader(504)
+					case "/api/binary":
+						if r.Header.Get("Accept") != "application/octet-stream" {
+							w.WriteHeader(415)
+							return
+						}
 						_, _ = w.Write(b)
 					case "/sums":
 						fmt.Fprintf(w, "%s  %s\n", sum, name)

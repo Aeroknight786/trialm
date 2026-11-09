@@ -41,8 +41,27 @@ trap cleanup EXIT
 
 installed=""
 # GitHub's download servers sometimes stall: time out, retry, never hang.
-fetch() { curl -fL --connect-timeout 10 --retry 3 --retry-delay 1 --speed-limit 2048 --speed-time 15 "$@"; }
-if fetch -sS --max-time 30 -o "$tmp/checksums.txt" "$base/checksums.txt" && fetch $bar -o "$tmp/$name" "$base/$name"; then
+fetch() { curl -fL --connect-timeout 10 --retry 2 --retry-delay 1 --speed-limit 2048 --speed-time 15 "$@"; }
+# GitHub's plain link can fail for one file for hours (github.com itself
+# answers 504) while its API still serves that file, so fall back to the API.
+asset_api() {
+  case "$version" in latest) rel=latest ;; *) rel="tags/$version" ;; esac
+  curl -fsS --connect-timeout 10 --max-time 30 "https://api.github.com/repos/$repo/releases/$rel" 2>/dev/null |
+    tr -d ' \n' | tr '{' '\n' | grep -F "\"name\":\"$1\"" |
+    sed -n 's|.*"url":"\(https://api\.github\.com/[^"]*/releases/assets/[0-9]*\)".*|\1|p' | head -n 1
+}
+via_api=""
+get() { # get FILE [curl options...]: download release file FILE into $tmp
+  f=$1; shift
+  if [ -z "$via_api" ]; then
+    fetch "$@" -o "$tmp/$f" "$base/$f" && return 0
+    via_api=1
+    printf '  %sGitHub'\''s download link failed; using its API%s\n' "$dim" "$off" >&2
+  fi
+  u=$(asset_api "$f")
+  [ -n "$u" ] && fetch "$@" -H "Accept: application/octet-stream" -o "$tmp/$f" "$u"
+}
+if get checksums.txt -s --max-time 30 && get "$name" $bar; then
   expected=$(grep " $name\$" "$tmp/checksums.txt" | awk '{print $1}')
   if command -v sha256sum >/dev/null 2>&1; then
     actual=$(sha256sum "$tmp/$name" | awk '{print $1}')
@@ -68,13 +87,13 @@ elif command -v go >/dev/null 2>&1; then
     echo "Install Go 1.21 or newer (https://go.dev/dl) and rerun; it fetches the rest by itself." >&2
     exit 1
   fi
-  echo "no release binary found; building with Go instead..."
+  echo "couldn't download a release binary; building with Go instead..."
   mkdir -p "$dir"
   GOTOOLCHAIN=auto GOBIN="$dir" go install "github.com/$repo/cmd/trialm@latest"
   installed="$dir/trialm"
 else
-  echo "No trialm release binary was found for $os/$arch and Go is not installed." >&2
-  echo "Install Go 1.21 or newer (https://go.dev/dl) and rerun." >&2
+  echo "Couldn't download trialm from GitHub. Try again in a minute," >&2
+  echo "or download it from https://github.com/$repo/releases/latest" >&2
   exit 1
 fi
 
