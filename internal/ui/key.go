@@ -59,7 +59,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	key, token := f.Store.Key(), ""
+	key, token, grant := f.Store.Key(), "", openrouter.Grant{}
 	trial := f.Trial && !*own && !*paste
 	authURL, client := f.AuthURL, f.Client
 	if trial {
@@ -115,7 +115,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		key, token = g.Key, g.Token
+		key, token, grant = g.Key, g.Token, g
 	}
 	if strings.TrimSpace(key) == "" {
 		return f.Needs("--paste", "no OpenRouter key")
@@ -125,7 +125,7 @@ func (f KeyFlow) Run(ctx context.Context, args []string) error {
 	credits := c.Credits
 	if trial {
 		c.BaseURL = "" // the key is OpenRouter's, wherever it came from
-		credits = c.NewKeyCredits
+		credits = func(ctx context.Context) (float64, error) { return c.GrantCredits(ctx, grant) }
 	}
 	balance, err := credits(ctx)
 	if err != nil {

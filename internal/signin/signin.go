@@ -115,7 +115,7 @@ func (h *Headless) Finish(ctx context.Context, code string) error {
 // saveAuthorization checks the key against OpenRouter before keeping it,
 // with what it can spend and, from a trial sign-in, the feedback token.
 func saveAuthorization(ctx context.Context, s store.Store, g openrouter.Grant) error {
-	balance, e := (openrouter.Client{Key: g.Key}).NewKeyCredits(ctx)
+	balance, e := (openrouter.Client{Key: g.Key}).GrantCredits(ctx, g)
 	if e != nil {
 		return e
 	}
@@ -146,7 +146,12 @@ func Explain(err error, trial bool, own string) string {
 	case "trials_paused":
 		return "Free trials are paused right now. " + strings.ToUpper(own[:1]) + own[1:] + " to use your own OpenRouter key."
 	}
-	return "Free trial sign-in did not finish. Try again, or " + own + " to use your own OpenRouter key."
+	why := "" // the reason, on one short line, so the next report says what failed
+	if err != nil {
+		why = strings.Join(strings.Fields(err.Error()), " ")
+		why = " (" + why[:min(90, len(why))] + ")"
+	}
+	return "Free trial sign-in did not finish" + why + ". Try again, or " + own + " to use your own OpenRouter key."
 }
 
 // SendFeedback posts one note the user chose to send to the trial site,
