@@ -93,9 +93,21 @@ func (c Client) Credits(ctx context.Context) (float64, error) {
 // Grant is what a sign-in hands back: the OpenRouter key, plus, from the
 // Mortiphi trial sign-in, a token for sending feedback.
 type Grant struct {
-	Key       string `json:"key"`
-	Token     string `json:"token"`
-	ExpiresAt string `json:"expires_at"`
+	Key       string   `json:"key"`
+	Token     string   `json:"token"`
+	ExpiresAt string   `json:"expires_at"`
+	Remaining *float64 `json:"remaining_usd"` // what the trial site made the key to spend
+}
+
+// GrantCredits is what a key just made can spend. OpenRouter can take longer
+// than NewKeyCredits waits to accept a key it just made; the trial site said
+// what the key may spend when it made it, so that stands in until then.
+func (c Client) GrantCredits(ctx context.Context, g Grant) (float64, error) {
+	v, err := c.NewKeyCredits(ctx)
+	if err != nil && g.Remaining != nil {
+		return *g.Remaining, nil
+	}
+	return v, err
 }
 
 func (c Client) Exchange(ctx context.Context, code, verifier string) (string, error) {

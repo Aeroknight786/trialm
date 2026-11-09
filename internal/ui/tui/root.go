@@ -127,7 +127,8 @@ type windowDoneMsg struct{ err error }
 
 // Root owns every screen and sub-model for the entire interactive session.
 type Root struct {
-	start                         int // tokens the agent's estimates assume it sends first
+	start                         int                  // tokens the agent's estimates assume it sends first
+	ranked                        map[string]modelsMsg // each agent's list, so tab swaps at once
 	otherModels                   []hw.ModelServer
 	gridFocus                     bool
 	picker                        core.ConfigPicker
@@ -269,11 +270,21 @@ func (m *Root) afterKey() tea.Cmd {
 	return nil
 }
 func (m *Root) loadModels() tea.Cmd {
+	m.ranked = nil
+	return m.rank(true)
+}
+
+// rank lists models for the current agent. On tab the old list stays up
+// until the new one is ready, and an agent shown before comes from memory.
+func (m *Root) rank(detecting bool) tea.Cmd {
 	if m.cfg.Models == nil {
 		m.detecting = false
 		return nil
 	}
-	m.detecting = true
+	if v, ok := m.ranked[m.cfg.Preferences.Tool]; ok && !detecting {
+		return func() tea.Msg { return v }
+	}
+	m.detecting = detecting
 	d, p := m.detection, m.cfg.Preferences
 	return func() tea.Msg {
 		rows, e := m.cfg.Models(m.cfg.Context, d, p)
@@ -450,6 +461,10 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detecting = false
 		if v.err == nil {
 			m.models, m.start = v.rows, v.start
+			if m.ranked == nil {
+				m.ranked = map[string]modelsMsg{}
+			}
+			m.ranked[v.tool] = v
 		}
 		if m.firstRun && m.screen() == Detect && v.err == nil {
 			for _, x := range v.rows {
@@ -867,7 +882,7 @@ func (m *Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "tab":
 				m.cfg.Preferences.Tool = m.nextTool()
 				if m.detection.Target.OS == "darwin" {
-					return m, m.loadModels()
+					return m, m.rank(false)
 				}
 			case "t":
 				return m, m.try(false)

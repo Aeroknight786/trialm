@@ -316,7 +316,16 @@ func (m *Root) readyBody() string {
 			status = "Works"
 		}
 	}
-	b += "\n\n" + m.tiles([]string{"Per reply", "First reply", toolName(p.Harness)}, []string{estimated(reply), estimated(first), status}, []string{"est. " + strings.TrimPrefix(estReply.Number(), "~"), "est. " + strings.TrimPrefix(estFirst.Number(), "~"), "Chat · Tools · Follow-up"})
+	rows := [][3]string{{"Per reply", estimated(reply), "est. " + strings.TrimPrefix(estReply.Number(), "~")},
+		{"First reply", estimated(first), "est. " + strings.TrimPrefix(estFirst.Number(), "~")}, {toolName(p.Harness), status, "Chat · Tools · Follow-up"}}
+	lw, vw := 0, 0
+	for _, r := range rows {
+		lw, vw = max(lw, len(r[0])), max(vw, len(r[1]))
+	}
+	b += "\n" // three plain aligned lines: what was measured, beside the estimate
+	for _, r := range rows {
+		b += fmt.Sprintf("\n%-*s", lw+3, r[0]) + m.theme.good.Render(fmt.Sprintf("%-*s", vw+3, r[1])) + m.theme.dim.Render(r[2])
+	}
 	if warning := m.modelWarning(); warning != "" {
 		b += "\n\n" + warning
 	}
