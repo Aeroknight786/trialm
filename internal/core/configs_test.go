@@ -194,8 +194,8 @@ func TestMLXGridFiles(t *testing.T) {
 		t.Fatal(names)
 	}
 	big, _ := catalog.Lookup("qwen3.6:35b-a3b")
-	if g := BuildConfigGrid(big, mlx, "f16", target, sc, nil, nil); len(g.Files) != 0 || g.Folded != 1 {
-		t.Fatal("the 20.4 GB MLX file cannot fit 16 GB", g.Files, g.Folded)
+	if g := BuildConfigGrid(big, mlx, "f16", target, sc, nil, nil); len(g.Files) != 0 || g.Folded != 3 {
+		t.Fatal("no 35B MLX file (20.4 GB and up) fits 16 GB", g.Files, g.Folded)
 	}
 	if q, _ := m.Quant("MLX-4bit"); m.MLXRepo(q) != "mlx-community/Qwen3.5-9B-MLX-4bit" {
 		t.Fatal(m.MLXRepo(q))

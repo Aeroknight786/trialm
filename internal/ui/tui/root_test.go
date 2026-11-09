@@ -49,7 +49,6 @@ var pickerFixture struct {
 
 // Frames show llama.cpp and Ollama whether or not this machine has uv;
 // TestMLXOfferedWithUV covers MLX.
-func init() { core.UVFound = func() bool { return false } }
 
 func fixture(t testing.TB) *Root {
 	t.Helper()

@@ -12,7 +12,6 @@ import (
 	"github.com/aeroknight786/trialm/internal/predict"
 	"github.com/aeroknight786/trialm/internal/store"
 	"os"
-	"os/exec"
 	"slices"
 	"sort"
 	"strings"
@@ -255,7 +254,6 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 	out := ConfigPicker{Target: d.Target, Harness: h, Scenario: h.Scenario}
 	c := CurrentCalibration(ctx, home)
 	userHome, _ := os.UserHomeDir()
-	uv := UVFound()
 	for _, row := range l.Rows {
 		if err := ctx.Err(); err != nil {
 			return out, err
@@ -264,8 +262,8 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 			continue
 		}
 		cm := ConfigModel{MinContext: predict.MinContext(h.Scenario), Default: row, CacheTypes: []string{"f16", "q8_0", "q4_0"}, Grids: map[string]ConfigGrid{}}
-		for _, rt := range engine.All() {
-			if rt.ID != "llamacpp" && !l.Installed.Has(rt.ID) && (rt.ID != "mlx-lm" || !uv) || !hasFile(row.Result.Model, rt) {
+		for _, rt := range engine.All() { // setup installs llama.cpp and mlx-lm itself
+			if rt.ID != "llamacpp" && rt.ID != "mlx-lm" && !l.Installed.Has(rt.ID) || !hasFile(row.Result.Model, rt) {
 				continue
 			}
 			probe := predict.Predict(predict.Input{Model: row.Result.Model, Runtime: rt, Target: d.Target, Tuned: true, Scenario: h.Scenario})
@@ -310,10 +308,6 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 
 // BuildConfigGrid uses exactly the predictor's memory and depth timing. Each
 // immutable table is cached by model/runtime/cache for the life of a picker.
-// UVFound reports whether uv is on PATH: setup installs mlx-lm with it, so
-// MLX is offered before it is installed. A variable so tests can pin it.
-var UVFound = func() bool { _, err := exec.LookPath("uv"); return err == nil }
-
 // hasFile reports whether the engine has a file it can set up (MLX files
 // need a known repository).
 func hasFile(m catalog.Model, rt engine.Profile) bool {

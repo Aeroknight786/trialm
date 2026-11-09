@@ -124,7 +124,7 @@ func (e *Executor) validate(p Plan) error {
 			}
 		}
 		if s.Kind == Install && s.Request == nil {
-			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "mlx-lm==0.32.2"}}
+			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "--python", "3.12", "mlx-lm==0.32.2"}}
 			expected := allowed[s.Package]
 			if s.Package == "ollama-model" {
 				expected = []string{"ollama", "create", p.LocalModelName, "-f", "~/.trialm/ollama/" + p.LocalModelName + ".Modelfile"}
@@ -143,6 +143,9 @@ func (e *Executor) validate(p Plan) error {
 				}
 				if base == "lms" || base == "lms.exe" {
 					actual[0] = "lms"
+				}
+				if base == "uv" && s.Package == "mlx-lm" && inside(filepath.Join(e.Root, "engines"), e.expand(actual[0])) {
+					actual[0] = "uv"
 				}
 			}
 			if expected == nil || !slices.Equal(expected, actual) {

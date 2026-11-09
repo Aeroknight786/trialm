@@ -153,9 +153,13 @@ func Build(in Input) (Plan, error) {
 	var adapterEnv []string
 	if p.Runtime != "llamacpp" && !in.Installed {
 		if p.Runtime == "mlx-lm" {
+			uv := engine.UVAsset(in.OS, in.Arch)
 			argv, _ := engine.Args("mlx-install", values)
 			dest := "~/.trialm/engines/" + p.Slug
-			adapterEnv = []string{"UV_TOOL_DIR=" + dest + "/tools", "UV_TOOL_BIN_DIR=" + dest + "/bin", "UV_CACHE_DIR=" + dest + "/cache"}
+			argv[0] = dest + "/uv/" + uv.Entry
+			adapterEnv = []string{"UV_TOOL_DIR=" + dest + "/tools", "UV_TOOL_BIN_DIR=" + dest + "/bin", "UV_CACHE_DIR=" + dest + "/cache", "UV_PYTHON_INSTALL_DIR=" + dest + "/python"}
+			p.Steps = append(p.Steps, Step{ID: "uv", Kind: Install, Title: "Install pinned uv", Path: dest + "/uv", ArchiveRoot: uv.Root,
+				Request: &download.Request{URL: uv.URL, SHA256: uv.SHA256, Size: uv.Size, Dest: dest + "/uv.archive"}})
 			p.Steps = append(p.Steps, Step{ID: "engine", Kind: Install, Title: "Install allowlisted mlx-lm with uv", Package: "mlx-lm", Argv: argv, Env: adapterEnv, Path: dest})
 			adapterBinary = dest + "/bin/mlx_lm.server"
 		} else if p.Runtime == "ollama" {

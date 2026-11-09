@@ -139,7 +139,7 @@ func cachedModel(home, root string, m catalog.Model, q catalog.Quant) string {
 	}
 	repo := m.HFGGUFRepo
 	if q.Format == "mlx" {
-		repo = m.HFMLXRepo
+		repo = m.MLXRepo(q)
 	}
 	if repo == "" {
 		return ""

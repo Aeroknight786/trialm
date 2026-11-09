@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -108,6 +109,29 @@ func TestAdaptersAndHarnessFiles(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+func TestMLXInstallsItsOwnUV(t *testing.T) {
+	in := fixture(t)
+	in.Profile, _ = engine.Get("mlx-lm")
+	in.OS, in.Arch, in.Backend = "darwin", "arm64", "mlx"
+	in.Quant.Format = "mlx"
+	p, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = testExecutor(t).validate(p); err != nil {
+		t.Fatal(err)
+	}
+	ids := []string{}
+	for _, s := range p.Steps {
+		ids = append(ids, s.ID)
+		if s.ID == "engine" && !strings.HasSuffix(s.Argv[0], "/uv/uv") {
+			t.Fatal("mlx-lm not installed with the pinned uv", s.Argv)
+		}
+	}
+	if i := slices.Index(ids, "uv"); i < 0 || ids[i+1] != "engine" {
+		t.Fatal(ids)
 	}
 }
 func testExecutor(t *testing.T) *Executor {

@@ -11,7 +11,7 @@ Models · 2 of 14
 ╭────────────────────────────────────────────────────────╮
 │ Gemma  Gemma 4 26B-A4B  estimate                       │
 │ KV cache  f16 [q8_0] q4_0                              │
-│ Engine    [llama.cpp]                                  │
+│ Engine    [llama.cpp] MLX                              │
 │                                                        │
 │ t/s when full     32K         64K         128K         │
 │ → more                                                 │
