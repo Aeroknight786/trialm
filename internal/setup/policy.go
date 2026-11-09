@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -124,13 +125,16 @@ func (e *Executor) validate(p Plan) error {
 			}
 		}
 		if s.Kind == Install && s.Request == nil {
-			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "mlx-lm==0.32.2"}}
+			allowed := map[string][]string{"mlx-lm": {"uv", "tool", "install", "--python", "3.12", "mlx-lm==0.32.2"}}
 			expected := allowed[s.Package]
 			if s.Package == "ollama-model" {
 				expected = []string{"ollama", "create", p.LocalModelName, "-f", "~/.trialm/ollama/" + p.LocalModelName + ".Modelfile"}
 			}
 			if s.Package == "lms-model" {
 				expected, _ = engine.Args("lmstudio-load", map[string]string{"model": s.ArgvModel(), "name": p.LocalModelName, "ctx": fmt.Sprint(p.ContextTokens)})
+			}
+			if s.Package == "magnitude-model" && len(s.Argv) == 4 && magnitudeID.MatchString(s.Argv[3]) {
+				expected = []string{"magnitude", "catalog", "pull", s.Argv[3]}
 			}
 			if s.Package == "lms-import" {
 				expected, _ = engine.Args("lmstudio-import", map[string]string{"model": s.ArgvModel(), "namespace": s.NativeRepo})
@@ -144,8 +148,15 @@ func (e *Executor) validate(p Plan) error {
 				if base == "lms" || base == "lms.exe" {
 					actual[0] = "lms"
 				}
+				if base == "magnitude" && inside(filepath.Join(e.Root, "engines"), e.expand(actual[0])) {
+					actual[0] = "magnitude"
+				}
+				if base == "uv" && s.Package == "mlx-lm" && inside(filepath.Join(e.Root, "engines"), e.expand(actual[0])) {
+					actual[0] = "uv"
+				}
 			}
-			if expected == nil || !slices.Equal(expected, actual) {
+			legacy := s.Package == "mlx-lm" && slices.Equal(actual, []string{"uv", "tool", "install", "mlx-lm==0.32.2"}) // setups saved before the pinned uv
+			if !legacy && (expected == nil || !slices.Equal(expected, actual)) {
 				return errors.New("install is not an allowlisted package template")
 			}
 		}
@@ -163,7 +174,7 @@ func (e *Executor) validate(p Plan) error {
 			}
 			executable := e.expand(s.Argv[0])
 			allowed := slices.Contains([]string{"llama-server", "llama-server.exe", "ollama", "lms", "mlx_lm.server", "trialm", "/opt/homebrew/bin/llama-server", "/usr/local/bin/llama-server", "/home/linuxbrew/.linuxbrew/bin/llama-server"}, executable)
-			if filepath.IsAbs(executable) && (inside(filepath.Join(e.Root, "engines"), executable) || filepath.Base(executable) == "ollama" || filepath.Base(executable) == "mlx_lm.server" || filepath.Base(executable) == "llama-server" || filepath.Base(executable) == "llama-server.exe") {
+			if filepath.IsAbs(executable) && (inside(filepath.Join(e.Root, "engines"), executable) || filepath.Base(executable) == "ollama" || filepath.Base(executable) == "mlx_lm.server" || filepath.Base(executable) == "magnitude" || filepath.Base(executable) == "llama-server" || filepath.Base(executable) == "llama-server.exe") {
 				allowed = true
 			}
 			if !allowed {
@@ -173,6 +184,10 @@ func (e *Executor) validate(p Plan) error {
 	}
 	return nil
 }
+
+// magnitudeID is a Magnitude catalog model id such as "qwen3.5-4b:gguf:q4".
+var magnitudeID = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*:gguf:[a-z0-9-]+$`)
+
 func (s Step) ArgvModel() string {
 	if len(s.Argv) > 2 {
 		return s.Argv[2]

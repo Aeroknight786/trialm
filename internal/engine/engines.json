@@ -406,6 +406,66 @@
       "notes": [
         "OpenAI Chat Completions only: harnesses that need the Anthropic or Responses API need a translation layer."
       ]
+    },
+    {
+      "id": "magnitude",
+      "name": "Magnitude",
+      "versions": "0.2.17",
+      "engine": "magnitude",
+      "formats": [
+        "magnitude"
+      ],
+      "platforms": {
+        "darwin/arm64": [
+          "metal"
+        ]
+      },
+      "backend_preference": [
+        "metal"
+      ],
+      "apis": [
+        "openai-chat"
+      ],
+      "port": 10100,
+      "defaults": {
+        "context": {
+          "native": true,
+          "confidence": "medium",
+          "source": "Magnitude sizes the context itself, up to the model's native window, with a quantized KV cache"
+        },
+        "honors_request_num_ctx": false,
+        "keep_alive_s": -1,
+        "slots": 1,
+        "kv_cache_type": "f16",
+        "flash_attention": true,
+        "overflow": "error",
+        "on_context_full": "stop",
+        "swa_rollback": "free",
+        "checkpoints": 0,
+        "ram_cache_gib": 0
+      },
+      "confidence": {
+        "slots": "medium",
+        "overflow": "low",
+        "swa_rollback": "low"
+      },
+      "tuned": {
+        "steps": [
+          "magnitude serve, then magnitude catalog pull <model-id>; it tunes kernels and ships a drafter per model"
+        ],
+        "kv_q8_step": "Magnitude quantizes the KV cache itself"
+      },
+      "perf": {
+        "decode_mult": 1.0,
+        "prefill_mult": 1.15,
+        "load_overhead_s": 3,
+        "confidence": "low",
+        "source": "2026-11-09, MacBook Air M5 10c, Qwen3.5 4B Q4 vs llama.cpp b12182 on the same weights, alternating runs on power: prefill +15% at 20K tokens; decode speed-ups come from each model's drafter (catalog Draft), none measured for models without one"
+      },
+      "notes": [
+        "Delegated engine: Magnitude's own CLI serves, downloads and tunes; triaLM installs it under ~/.trialm and drives it.",
+        "OpenAI Chat Completions under /inference/v1: harnesses reach it through triaLM's bridge."
+      ]
     }
   ],
   "release": "b12182",
@@ -496,6 +556,12 @@
       "-np",
       "1"
     ],
+    "llamacpp-mtp": [
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "2"
+    ],
     "ollama": [
       "ollama",
       "serve"
@@ -539,6 +605,8 @@
       "uv",
       "tool",
       "install",
+      "--python",
+      "3.12",
       "mlx-lm==0.32.2"
     ],
     "mlx-remove": [
@@ -590,9 +658,26 @@
     "mlx-kv": [
       "--kv-bits",
       "{kvbits}"
+    ],
+    "magnitude-serve": [
+      "magnitude",
+      "serve"
+    ],
+    "magnitude-pull": [
+      "magnitude",
+      "catalog",
+      "pull",
+      "{model}"
     ]
   },
   "other_assets": {
+    "uv/darwin/arm64": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-aarch64-apple-darwin.tar.gz",
+      "sha256": "60fbd5c8a1ed681845eea28d9d622fcde03c51e91a43465b64a1e17db1ed3472",
+      "size": 14235670,
+      "root": "uv-aarch64-apple-darwin",
+      "entry": "uv"
+    },
     "ollama/darwin/arm64": {
       "url": "https://github.com/ollama/ollama/releases/download/v0.40.15/ollama-darwin.tgz",
       "sha256": "607c79d5d6315ef9d896db83adde736a4c0057196329843544e79b95afb260a8",
@@ -616,6 +701,13 @@
       "sha256": "9ca74a7ab66ec86870b1eecac7df160df08dc4e3a291ab5d2d59bcf9310221c6",
       "size": 1614941966,
       "entry": "ollama.exe"
+    },
+    "magnitude/darwin/arm64": {
+      "url": "https://github.com/magnitudedev/magnitude/releases/download/%40magnitudedev/cli%400.2.17/magnitude-desktop-darwin-arm64.zip",
+      "sha256": "4ee708b1560f39ffa93fa76588e1ecc7c84ec3b315db366cfe464f5ce0368b88",
+      "size": 197864109,
+      "root": "",
+      "entry": "Magnitude.app/Contents/Resources/magnitude"
     }
   },
   "lms_installer": {

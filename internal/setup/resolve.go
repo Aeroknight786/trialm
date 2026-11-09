@@ -57,13 +57,10 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 		}
 		in.Calibrate = prefs.Calibrate && !calib.Current(ctx, root, engine.SharedBinary(root, "llama-bench", in.OS))
 	}
-	if in.LocalModel != "" || len(in.Assets) > 0 {
+	if in.LocalModel != "" || len(in.Assets) > 0 || in.Quant.Format == "magnitude" {
 		return in, nil
 	}
-	repo := in.Model.HFGGUFRepo
-	if in.Quant.Format == "mlx" {
-		repo = in.Model.MLXRepo(in.Quant)
-	}
+	repo := in.Model.FileRepo(in.Quant)
 	if repo == "" {
 		return in, errors.New("no Hugging Face repository is known for this model")
 	}

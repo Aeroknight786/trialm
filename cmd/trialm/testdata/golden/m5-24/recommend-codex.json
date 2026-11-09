@@ -95,6 +95,51 @@
     },
     {
       "rank": 3,
+      "model": "lfm2.5:24b-a2b",
+      "model_name": "LFM2.5 24B-A2B",
+      "quant": "MLX-4bit",
+      "runtime": "mlx-lm",
+      "try_command": "trialm try lfm2.5:24b-a2b --runtime mlx-lm --quant MLX-4bit --harness codex",
+      "verdict": "comfortable",
+      "runtime_installed": false,
+      "prediction": {
+        "kind": "simulated",
+        "runtime": "mlx-lm",
+        "tuned": true,
+        "backend": "mlx",
+        "quant": "MLX-4bit",
+        "download_gb": 13.5672943,
+        "context_tokens": 65536,
+        "memory_gb": 14.9030055,
+        "budget_gb": 17.1798692,
+        "fit": "fits",
+        "decode_tps": 76.2478009,
+        "decode_tps_deep": 45.6359119,
+        "prefill_tps": 1991.60828,
+        "cold_first_reply_s": 13.506991,
+        "follow_up_ttft_s": 2.22972929,
+        "follow_up_turn_s": 8.80349954,
+        "session_s": 441.509369,
+        "cloud_session_s": 120,
+        "decode_error_range_pct": 70,
+        "prefill_error_range_pct": 80,
+        "no_speed_claim": false,
+        "warnings": [
+          "quality caveat: the trial uses the cloud's provider-dependent weights; local MLX-4bit is typically 0–3 points worse on coding tasks and makes more tool-call mistakes"
+        ],
+        "assumptions": [
+          "overflow=error (unverified for this version)",
+          "swa_rollback=free (unverified for this version)"
+        ],
+        "tune_steps": [
+          "mlx_lm.server --model \u003cmlx-model\u003e",
+          "Use an 8-bit KV cache to fit the longer context: --kv-bits 8"
+        ],
+        "context_note": "tuned for agentic use"
+      }
+    },
+    {
+      "rank": 4,
       "model": "gpt-oss:20b",
       "model_name": "gpt-oss 20B",
       "quant": "MLX-MXFP4",
@@ -136,7 +181,7 @@
       }
     },
     {
-      "rank": 4,
+      "rank": 5,
       "model": "qwen3.5:4b",
       "model_name": "Qwen3.5 4B",
       "quant": "MLX-4bit",
@@ -175,51 +220,6 @@
         ],
         "tune_steps": [
           "mlx_lm.server --model \u003cmlx-model\u003e"
-        ],
-        "context_note": "tuned for agentic use"
-      }
-    },
-    {
-      "rank": 5,
-      "model": "gemma4:12b",
-      "model_name": "Gemma 4 12B",
-      "quant": "Q4_K_M",
-      "runtime": "llamacpp",
-      "try_command": "trialm try gemma4:12b --runtime llamacpp --harness codex",
-      "verdict": "usable",
-      "runtime_installed": false,
-      "prediction": {
-        "kind": "simulated",
-        "runtime": "llamacpp",
-        "tuned": true,
-        "backend": "metal",
-        "quant": "Q4_K_M",
-        "download_gb": 7.12186144,
-        "context_tokens": 65536,
-        "memory_gb": 9.61067495,
-        "budget_gb": 17.1798692,
-        "fit": "fits",
-        "decode_tps": 13.7662188,
-        "decode_tps_deep": 9.97994008,
-        "prefill_tps": 377.397548,
-        "cold_first_reply_s": 53.6200506,
-        "follow_up_ttft_s": 9.84884382,
-        "follow_up_turn_s": 39.9091446,
-        "session_s": 1800.75201,
-        "cloud_session_s": 120,
-        "decode_error_range_pct": 45,
-        "prefill_error_range_pct": 55,
-        "no_speed_claim": false,
-        "warnings": [
-          "trial stand-in: no cloud provider hosts this exact model, so trials use Gemma 4 26B-A4B, the same family one size up, so trial answers are a little better than the local model. Speed is simulated from this file exactly; the answers, including any fine-tuning or style, are the stand-in's"
-        ],
-        "assumptions": [
-          "default context: recent builds size the context to free memory (--fit); older builds default to 4096",
-          "checkpoints=8 (unverified for this version)"
-        ],
-        "tune_steps": [
-          "llama-server -m \u003cmodel.gguf\u003e -c 65536 -fa on --jinja",
-          "Optional: --slot-save-path to persist the harness prompt cache across restarts"
         ],
         "context_note": "tuned for agentic use"
       }

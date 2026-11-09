@@ -11,7 +11,7 @@ Models · 14 of 14
 ╭────────────────────────────────────────────────────────╮
 │ LFM3  LFM3 1.7B  estimate                              │
 │ KV cache  [f16] q8_0 q4_0                              │
-│ Engine    [llama.cpp]                                  │
+│ Engine    [llama.cpp] Magnitude                        │
 │                                                        │
 │ t/s when full     32K         64K         128K         │
 │ → more                                                 │

@@ -27,11 +27,22 @@ import (
 //go:embed models_gguf.json
 var generatedJSON []byte
 
+// filesJSON lists files beyond the model's GGUF repository: MLX builds (one
+// repository per bit width; sizes are the safetensors total, vision weights
+// included; only builds the pinned mlx-lm loads), GGUFs with a
+// multi-token-prediction head (MTP), which llama.cpp drafts with, and
+// Magnitude catalog models (sizes and drafters from `magnitude catalog show
+// --json`, 0.2.17; reads per token from the matching GGUF).
+//
+//go:embed models_files.json
+var filesJSON []byte
+
 // Quant is one downloadable quantization of a model.
 type Quant struct {
 	// Name, e.g. "Q4_K_M", "Q8_0", "MXFP4", "MLX-4bit".
 	Name string
-	// Format is "gguf" or "mlx".
+	// Format is "gguf", "mlx" or "magnitude" (a Magnitude catalog model,
+	// whose Repo is its model id).
 	Format string
 	// FileBytes is the download size (and resident weight size).
 	FileBytes int64
@@ -44,9 +55,14 @@ type Quant struct {
 	// from Name (e.g. "UD-Q4_K_M", "MXFP4_MOE", "Q4_K"); used as
 	// hf.co/<repo>:<tag> by Ollama, llama.cpp and LM Studio.
 	FileTag string `json:",omitempty"`
-	// Repo holds this file when it differs per quant: mlx-community
-	// publishes one repository per bit width.
+	// Repo holds this file when it is not the model's GGUF repository:
+	// mlx-community publishes one repository per bit width, and MTP GGUFs
+	// have their own.
 	Repo string `json:",omitempty"`
+	// Draft names how the engine drafts tokens with this file (speculative
+	// decoding): "mtp" for a multi-token-prediction head, or a drafter
+	// Magnitude ships ("dflash", "dspark").
+	Draft string `json:",omitempty"`
 }
 
 // HFTag returns the tag that selects the quant's file on Hugging Face.
@@ -158,7 +174,6 @@ type Model struct {
 	QuantMatchesCloud bool
 
 	HFGGUFRepo string
-	HFMLXRepo  string
 	Notes      []string
 }
 
@@ -198,7 +213,6 @@ var models = []Model{
 		NativeCtx: 131072, Tools: true, Thinking: true,
 		Quants: []Quant{
 			{Name: "MXFP4", Format: "gguf", FileBytes: 12_101_000_000, ReadBytesPerToken: 2_570_000_000},
-			{Name: "MLX-MXFP4", Format: "mlx", FileBytes: 12_076_207_568, ReadBytesPerToken: 2_570_000_000, Repo: "mlx-community/gpt-oss-20b-MXFP4-Q8"},
 		},
 		OpenRouterID: "openai/gpt-oss-20b", CloudPrecision: "MXFP4 (native release format)", QuantMatchesCloud: true,
 		HFGGUFRepo: "ggml-org/gpt-oss-20b-GGUF",
@@ -222,10 +236,10 @@ var models = []Model{
 		Layers: 48, FullAttnLayers: 48, KVHeads: 4, HeadDim: 128, QHeads: 32, DecodeEff: 0.72,
 		NativeCtx: 262144, Tools: true,
 		// Low-bit sizes from the Hugging Face file listing of the repo below.
-		Quants: []Quant{gq("Q4_K_M", 18.6), gq("Q6_K", 25.1), gq("Q8_0", 32.5), est("MLX-4bit", 30.53),
+		Quants: []Quant{gq("Q4_K_M", 18.6), gq("Q6_K", 25.1), gq("Q8_0", 32.5),
 			gq("IQ4_XS", 16.38), gqt("Q3_K_XL", "UD-Q3_K_XL", 13.81), gqt("IQ3_XXS", "UD-IQ3_XXS", 12.85)},
 		OpenRouterID: "qwen/qwen3-coder-30b-a3b-instruct", CloudPrecision: "BF16/FP8 (provider-dependent)",
-		HFGGUFRepo: "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF", HFMLXRepo: "mlx-community/Qwen3-Coder-30B-A3B-Instruct-4bit",
+		HFGGUFRepo: "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
 	},
 	{
 		ID: "qwen3-32b", Name: "Qwen3 32B", OllamaTag: "qwen3:32b", Aliases: []string{"qwen/qwen3-32b"},
@@ -321,39 +335,33 @@ func init() {
 	if err := json.Unmarshal(generatedJSON, &gen); err != nil {
 		panic("catalog: invalid models_gguf.json: " + err.Error())
 	}
+	var files map[string][]Quant
+	if err := json.Unmarshal(filesJSON, &files); err != nil {
+		panic("catalog: invalid models_files.json: " + err.Error())
+	}
 	have := map[string]bool{}
 	for _, m := range models {
 		have[m.ID] = true
 	}
 	for _, m := range gen {
 		if !have[m.ID] {
-			m.Quants = append(m.Quants, mlxFiles[m.ID]...)
 			models = append(models, m)
 		}
 	}
+	for i := range models {
+		models[i].Quants = append(models[i].Quants, files[models[i].ID]...)
+	}
 }
 
-// mlxFiles adds MLX files to generated models (the generator writes GGUF
-// only). Sizes are each repository's safetensors total, vision weights
-// included.
-var mlxFiles = map[string][]Quant{
-	"qwen3.5-9b": {
-		{Name: "MLX-4bit", Format: "mlx", FileBytes: 5_950_221_072, Repo: "mlx-community/Qwen3.5-9B-MLX-4bit"},
-		{Name: "MLX-8bit", Format: "mlx", FileBytes: 10_426_592_423, Repo: "mlx-community/Qwen3.5-9B-MLX-8bit"},
-	},
-	"qwen3.5-4b": {
-		{Name: "MLX-4bit", Format: "mlx", FileBytes: 3_034_300_695, Repo: "mlx-community/Qwen3.5-4B-MLX-4bit"},
-		{Name: "MLX-8bit", Format: "mlx", FileBytes: 5_136_696_107, Repo: "mlx-community/Qwen3.5-4B-MLX-8bit"},
-	},
-	"qwen3.6-35b-a3b": {{Name: "MLX-4bit", Format: "mlx", FileBytes: 20_402_204_271, Repo: "mlx-community/Qwen3.6-35B-A3B-4bit"}},
-}
+// MTP reports whether q is a GGUF with an MTP head for llama.cpp to draft with.
+func (q Quant) MTP() bool { return q.Draft == "mtp" && q.Format == "gguf" }
 
-// MLXRepo is the repository holding an MLX file, "" when none is known.
-func (m Model) MLXRepo(q Quant) string {
-	if q.Repo != "" {
+// FileRepo is the Hugging Face repository holding q, "" when none is known.
+func (m Model) FileRepo(q Quant) string {
+	if q.Repo != "" || q.Format != "gguf" {
 		return q.Repo
 	}
-	return m.HFMLXRepo
+	return m.HFGGUFRepo
 }
 
 // All returns catalog models sorted by total size.

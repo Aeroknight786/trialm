@@ -103,6 +103,13 @@ func OllamaAsset(goos, arch string) (Asset, error) {
 
 func OllamaRelease() string { return data.OllamaRelease }
 
+// MagnitudeAsset is the pinned Magnitude app, unpacked under ~/.trialm.
+func MagnitudeAsset(goos, arch string) Asset { return data.OtherAssets["magnitude/"+goos+"/"+arch] }
+
+// UVAsset is the pinned uv that installs mlx-lm, so MLX needs nothing
+// preinstalled. Without a pin it is empty, which setup's policy rejects.
+func UVAsset(goos, arch string) Asset { return data.OtherAssets["uv/"+goos+"/"+arch] }
+
 func LMSWindowsInstaller() Installer { return data.LMSWindowsInstaller }
 
 // SharedInstalled requires both benchmark and server from the completed install.

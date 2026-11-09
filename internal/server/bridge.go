@@ -30,6 +30,7 @@ var runtimeEndpoints = []struct{ id, name, url string }{
 	{"ollama", "Ollama", "http://127.0.0.1:11434"},
 	{"lmstudio", "LM Studio", "http://127.0.0.1:1234"},
 	{"mlx-lm", "mlx-lm", "http://127.0.0.1:8080"},
+	{"magnitude", "Magnitude", "http://127.0.0.1:10100/inference"},
 }
 
 // cmdBridge connects a harness to a real local runtime through triaLM's

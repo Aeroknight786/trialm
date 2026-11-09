@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -108,6 +109,59 @@ func TestAdaptersAndHarnessFiles(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+func TestMLXInstallsItsOwnUV(t *testing.T) {
+	in := fixture(t)
+	in.Profile, _ = engine.Get("mlx-lm")
+	in.OS, in.Arch, in.Backend = "darwin", "arm64", "mlx"
+	in.Quant.Format = "mlx"
+	p, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = testExecutor(t).validate(p); err != nil {
+		t.Fatal(err)
+	}
+	ids := []string{}
+	for _, s := range p.Steps {
+		ids = append(ids, s.ID)
+		if s.ID == "engine" && !strings.HasSuffix(s.Argv[0], "/uv/uv") {
+			t.Fatal("mlx-lm not installed with the pinned uv", s.Argv)
+		}
+	}
+	if i := slices.Index(ids, "uv"); i < 0 || ids[i+1] != "engine" {
+		t.Fatal(ids)
+	}
+	// Setups saved with uv from PATH still launch.
+	old := basicPlan(Step{ID: "engine", Kind: Install, Package: "mlx-lm", Argv: []string{"uv", "tool", "install", "mlx-lm==0.32.2"}})
+	if err = testExecutor(t).validate(old); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestMagnitudeInstallsServesAndPulls(t *testing.T) {
+	in := fixture(t)
+	in.Profile, _ = engine.Get("magnitude")
+	in.OS, in.Arch, in.Backend = "darwin", "arm64", "metal"
+	in.Quant = catalog.Quant{Name: "Q4", Format: "magnitude", FileBytes: 4 << 30, Repo: "qwen3.5-4b:gguf:q4", Draft: "dflash"}
+	in.Assets = nil
+	p, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = testExecutor(t).validate(p); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, s := range p.Steps {
+		ids = append(ids, s.ID)
+	}
+	if p.Endpoint != "http://127.0.0.1:10100/inference" || p.LocalModelName != "qwen3.5-4b:gguf:q4" || !slices.Equal(ids[:3], []string{"engine", "server", "register"}) {
+		t.Fatal(p.Endpoint, p.LocalModelName, ids)
+	}
+	bad := basicPlan(Step{ID: "register", Kind: Install, Package: "magnitude-model", Argv: []string{"magnitude", "catalog", "pull", "--force"}})
+	if testExecutor(t).validate(bad) == nil {
+		t.Fatal("pull accepted a flag as the model id")
 	}
 }
 func testExecutor(t *testing.T) *Executor {

@@ -1,0 +1,87 @@
+{
+  "gpt-oss-20b": [
+    {"Name": "MLX-MXFP4", "Format": "mlx", "FileBytes": 12076207568, "Repo": "mlx-community/gpt-oss-20b-MXFP4-Q8", "ReadBytesPerToken": 2570000000}
+  ],
+  "gpt-oss-120b": [
+    {"Name": "MLX-MXFP4", "Format": "mlx", "FileBytes": 63386948506, "Repo": "mlx-community/gpt-oss-120b-MXFP4-Q8", "ReadBytesPerToken": 3530000000}
+  ],
+  "qwen3-coder-30b-a3b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 17181071994, "Repo": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 32440736503, "Repo": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 24807758602, "Repo": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-6bit"},
+    {"Name": "MLX-3bit", "Format": "mlx", "FileBytes": 13358291526, "Repo": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-3bit"}
+  ],
+  "qwen3.8-27b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 16054541349, "Repo": "mlx-community/Qwen3.8-27B-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 29501218479, "Repo": "mlx-community/Qwen3.8-27B-8bit"}
+  ],
+  "qwen3.6-35b-a3b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 20402204271, "Repo": "mlx-community/Qwen3.6-35B-A3B-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 37721403002, "Repo": "mlx-community/Qwen3.6-35B-A3B-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 29061803049, "Repo": "mlx-community/Qwen3.6-35B-A3B-6bit"}
+  ],
+  "qwen3.5-9b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 5950221072, "Repo": "mlx-community/Qwen3.5-9B-MLX-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 10426592423, "Repo": "mlx-community/Qwen3.5-9B-MLX-8bit"},
+    {"Name": "Q4_K_M-MTP", "Format": "gguf", "FileBytes": 5868826976, "ReadBytesPerToken": 5097424896, "FileTag": "Q4_K_M", "Repo": "unsloth/Qwen3.5-9B-MTP-GGUF", "Draft": "mtp"},
+    {"Name": "Q8_0-MTP", "Format": "gguf", "FileBytes": 9786061152, "ReadBytesPerToken": 8435845120, "FileTag": "Q8_0", "Repo": "unsloth/Qwen3.5-9B-MTP-GGUF", "Draft": "mtp"},
+    {"Name": "Q4", "Format": "magnitude", "FileBytes": 8440507552, "ReadBytesPerToken": 5097424896, "Repo": "qwen3.5-9b:gguf:q4", "Draft": "dflash"},
+    {"Name": "Q8", "Format": "magnitude", "FileBytes": 15550655648, "ReadBytesPerToken": 8435845120, "Repo": "qwen3.5-9b:gguf:q8", "Draft": "dflash"}
+  ],
+  "qwen3.5-4b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 3034300695, "Repo": "mlx-community/Qwen3.5-4B-MLX-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 5136696107, "Repo": "mlx-community/Qwen3.5-4B-MLX-8bit"},
+    {"Name": "Q4_K_M-MTP", "Format": "gguf", "FileBytes": 2834975040, "ReadBytesPerToken": 2729969664, "FileTag": "Q4_K_M", "Repo": "unsloth/Qwen3.5-4B-MTP-GGUF", "Draft": "mtp"},
+    {"Name": "Q8_0-MTP", "Format": "gguf", "FileBytes": 4610580800, "ReadBytesPerToken": 4471435264, "FileTag": "Q8_0", "Repo": "unsloth/Qwen3.5-4B-MTP-GGUF", "Draft": "mtp"},
+    {"Name": "Q4", "Format": "magnitude", "FileBytes": 4351367392, "ReadBytesPerToken": 2729969664, "Repo": "qwen3.5-4b:gguf:q4", "Draft": "dflash"},
+    {"Name": "Q8", "Format": "magnitude", "FileBytes": 7426674912, "ReadBytesPerToken": 4471435264, "Repo": "qwen3.5-4b:gguf:q8", "Draft": "dflash"}
+  ],
+  "gemma4-12b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 6741039511, "Repo": "mlx-community/gemma-4-12B-it-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 12716202713, "Repo": "mlx-community/gemma-4-12B-it-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 9728621337, "Repo": "mlx-community/gemma-4-12B-it-6bit"},
+    {"Name": "Q4 QAT", "Format": "magnitude", "FileBytes": 7145181440, "ReadBytesPerToken": 7106035904, "Repo": "gemma-4-12b-it-qat:gguf:q4", "Draft": "mtp"}
+  ],
+  "gemma4-26b-a4b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 15341205776, "Repo": "mlx-community/gemma-4-26b-a4b-it-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 27953641429, "Repo": "mlx-community/gemma-4-26b-a4b-it-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 21647423449, "Repo": "mlx-community/gemma-4-26b-a4b-it-6bit"},
+    {"Name": "Q4 QAT", "Format": "magnitude", "FileBytes": 15443875360, "ReadBytesPerToken": 3475727416, "Repo": "gemma-4-26b-a4b-it-qat:gguf:q4"}
+  ],
+  "devstral-small-2-24b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 15102831624, "Repo": "mlx-community/Devstral-Small-2-24B-Instruct-2512-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 26553281789, "Repo": "mlx-community/Devstral-Small-2-24B-Instruct-2512-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 20828056548, "Repo": "mlx-community/Devstral-Small-2-24B-Instruct-2512-6bit"}
+  ],
+  "glm-4.7-flash": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 16852441819, "Repo": "mlx-community/GLM-4.7-Flash-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 31820995674, "Repo": "mlx-community/GLM-4.7-Flash-8bit"},
+    {"Name": "MLX-6bit", "Format": "mlx", "FileBytes": 24336718629, "Repo": "mlx-community/GLM-4.7-Flash-6bit"}
+  ],
+  "nemotron-3.5-lightning-30b-a3b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 17775425359, "Repo": "mlx-community/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 33559963550, "Repo": "mlx-community/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-8bit"}
+  ],
+  "granite-4.2-30b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 16469111945, "Repo": "ibm-granite/granite-4.2-30b-q4-mlx"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 31107233472, "Repo": "ibm-granite/granite-4.2-30b-q8-mlx"}
+  ],
+  "granite-4.2-8b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 4945853970, "Repo": "ibm-granite/granite-4.2-8b-q4-mlx"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 9341484710, "Repo": "ibm-granite/granite-4.2-8b-q8-mlx"}
+  ],
+  "lfm2.5-24b-a2b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 13567294335, "Repo": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit"},
+    {"Name": "Q4", "Format": "magnitude", "FileBytes": 14526258464, "ReadBytesPerToken": 1538931200, "Repo": "lfm2.5-24b-a2b:gguf:q4"}
+  ],
+  "lfm2.5-8b-a1b": [
+    {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 4764265165, "Repo": "mlx-community/LFM2.5-8B-A1B-MLX-4bit"},
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 8997366385, "Repo": "mlx-community/LFM2.5-8B-A1B-MLX-8bit"},
+    {"Name": "Q4", "Format": "magnitude", "FileBytes": 5512055936, "ReadBytesPerToken": 1067415296, "Repo": "lfm2.5-8b-a1b:gguf:q4", "Draft": "dspark"},
+    {"Name": "Q8", "Format": "magnitude", "FileBytes": 9366686848, "ReadBytesPerToken": 1795880704, "Repo": "lfm2.5-8b-a1b:gguf:q8", "Draft": "dspark"}
+  ],
+  "lfm3-1.7b": [
+    {"Name": "Q4 QAT", "Format": "magnitude", "FileBytes": 1049615680, "ReadBytesPerToken": 1091380480, "Repo": "lfm3-1.7b:gguf:q4-qat"},
+    {"Name": "Q8", "Format": "magnitude", "FileBytes": 1846238496, "ReadBytesPerToken": 1837991168, "Repo": "lfm3-1.7b:gguf:q8"}
+  ]
+}

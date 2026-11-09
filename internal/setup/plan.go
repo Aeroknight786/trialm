@@ -58,6 +58,9 @@ func Build(in Input) (Plan, error) {
 		port = in.Profile.Port
 	}
 	p.Endpoint = fmt.Sprintf("http://127.0.0.1:%d", port)
+	if p.Runtime == "magnitude" {
+		p.Endpoint += "/inference" // its OpenAI routes live under /inference/v1
+	}
 	p.Untouched = []string{"drivers and OS startup services", "existing model caches", "harness defaults"}
 	if in.OS == "darwin" && in.RequiredGPUBytes > in.DefaultGPUBytes && in.DefaultGPUBytes > 0 {
 		reserve := float64(4 << 30)
@@ -147,17 +150,29 @@ func Build(in Input) (Plan, error) {
 		}
 	}
 	adapterBinary := ""
-	if in.Installed && (p.Runtime == "ollama" || p.Runtime == "mlx-lm") {
+	if in.Installed && (p.Runtime == "ollama" || p.Runtime == "mlx-lm" || p.Runtime == "magnitude") {
 		adapterBinary = in.Binary
 	}
 	var adapterEnv []string
 	if p.Runtime != "llamacpp" && !in.Installed {
 		if p.Runtime == "mlx-lm" {
+			uv := engine.UVAsset(in.OS, in.Arch)
 			argv, _ := engine.Args("mlx-install", values)
 			dest := "~/.trialm/engines/" + p.Slug
-			adapterEnv = []string{"UV_TOOL_DIR=" + dest + "/tools", "UV_TOOL_BIN_DIR=" + dest + "/bin", "UV_CACHE_DIR=" + dest + "/cache"}
+			argv[0] = dest + "/uv/" + uv.Entry
+			adapterEnv = []string{"UV_TOOL_DIR=" + dest + "/tools", "UV_TOOL_BIN_DIR=" + dest + "/bin", "UV_CACHE_DIR=" + dest + "/cache", "UV_PYTHON_INSTALL_DIR=" + dest + "/python"}
+			p.Steps = append(p.Steps, Step{ID: "uv", Kind: Install, Title: "Install pinned uv", Path: dest + "/uv", ArchiveRoot: uv.Root,
+				Request: &download.Request{URL: uv.URL, SHA256: uv.SHA256, Size: uv.Size, Dest: dest + "/uv.archive"}})
 			p.Steps = append(p.Steps, Step{ID: "engine", Kind: Install, Title: "Install allowlisted mlx-lm with uv", Package: "mlx-lm", Argv: argv, Env: adapterEnv, Path: dest})
 			adapterBinary = dest + "/bin/mlx_lm.server"
+		} else if p.Runtime == "magnitude" {
+			// The signed app, unpacked under ~/.trialm with its own home, so
+			// its models and settings go when the setup is undone.
+			a, dest := engine.MagnitudeAsset(in.OS, in.Arch), "~/.trialm/engines/"+p.Slug
+			adapterEnv = []string{"HOME=" + dest + "/home"}
+			p.Steps = append(p.Steps, Step{ID: "engine", Kind: Install, Title: "Install pinned Magnitude " + in.Profile.Versions, Path: dest,
+				Request: &download.Request{URL: a.URL, SHA256: a.SHA256, Size: a.Size, Dest: dest + ".archive"}})
+			adapterBinary = dest + "/" + a.Entry
 		} else if p.Runtime == "ollama" {
 			a, err := engine.OllamaAsset(in.OS, in.Arch)
 			if err != nil {
@@ -205,6 +220,9 @@ func Build(in Input) (Plan, error) {
 		}
 	}
 	model := in.LocalModel
+	if in.Quant.Format == "magnitude" { // Magnitude downloads its own files
+		model, p.LocalModelName = in.Quant.Repo, in.Quant.Repo
+	}
 	for i, asset := range in.Assets {
 		asset.Token = ""
 		asset.Reuse = nil
@@ -257,6 +275,10 @@ func Build(in Input) (Plan, error) {
 			values["kvbits"] = bits
 			kvArgs, _ := engine.Args("mlx-kv", values)
 			argv = append(argv, kvArgs...)
+		}
+		if in.Quant.MTP() {
+			mtp, _ := engine.Args("llamacpp-mtp", values)
+			argv = append(argv, mtp...)
 		}
 		p.Steps = append(p.Steps, Step{ID: "server", Kind: Start, Title: "Start " + p.RuntimeName, Argv: argv, Env: engineEnv, Health: p.Endpoint + "/health"})
 	case "ollama":
@@ -312,6 +334,11 @@ func Build(in Input) (Plan, error) {
 			Inverse: []string{"lms", "server", "stop"},
 			Health:  p.Endpoint + "/v1/models",
 		})
+	case "magnitude":
+		argv, _ := engine.Args("magnitude-serve", values)
+		p.Steps = append(p.Steps, Step{ID: "server", Kind: Start, Title: "Start Magnitude", Argv: argv, Health: p.Endpoint + "/v1/models"})
+		argv, _ = engine.Args("magnitude-pull", values)
+		p.Steps = append(p.Steps, Step{ID: "register", Kind: Install, Title: "Download and tune the model in Magnitude", Package: "magnitude-model", Argv: argv, DownloadBytes: in.Quant.FileBytes})
 	default:
 		return p, fmt.Errorf("no adapter for %s", p.Runtime)
 	}
@@ -362,7 +389,7 @@ func Build(in Input) (Plan, error) {
 	}
 	for i := range p.Steps {
 		step := &p.Steps[i]
-		if adapterBinary != "" && len(step.Argv) > 0 && (step.Argv[0] == "ollama" || step.Argv[0] == "lms" || step.Argv[0] == "mlx_lm.server") {
+		if adapterBinary != "" && len(step.Argv) > 0 && (step.Argv[0] == "ollama" || step.Argv[0] == "lms" || step.Argv[0] == "mlx_lm.server" || step.Argv[0] == "magnitude") {
 			step.Argv[0] = adapterBinary
 			step.Env = append(step.Env, adapterEnv...)
 		}

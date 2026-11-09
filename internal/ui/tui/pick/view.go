@@ -126,7 +126,11 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 		}
 		engines = append(engines, name)
 	}
-	panel += "Engine    " + toggles(engines, m.Engine) + "\n\n"
+	panel += "Engine    " + toggles(engines, m.Engine) + "\n"
+	if m.HasMTP() {
+		panel += "MTP       " + toggles([]string{"off", "on"}, map[bool]int{true: 1}[m.MTP]) + "\n"
+	}
+	panel += "\n"
 	columns := len(g.Contexts)
 	if width < 76 {
 		columns = min(3, columns)
@@ -229,4 +233,4 @@ func View(p *core.ConfigPicker, index, width int, plain, focused bool) string {
 }
 
 const ListKeys = "↑↓ Model   ⏎ Choose   / Search   v Details   q Quit"
-const GridKeys = "↑↓ File   ←→ Context   c Cache   e Engine   ⏎ Try   s Set up   esc Models"
+const GridKeys = "↑↓ File   ←→ Context   c Cache   e Engine   m MTP   ⏎ Try   s Set up   esc Back"

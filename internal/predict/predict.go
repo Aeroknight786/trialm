@@ -69,8 +69,13 @@ type Timing struct {
 	AttnFLOPSEff       float64 // FLOP/s for attention
 	DecodeMult         float64
 	PrefillMult        float64
-	LoadColdS          float64 // from disk
-	LoadWarmS          float64 // from OS page cache
+	// Drafting with an MTP head: each step reads the weights once (plus
+	// DraftOverhead for the head and the extra tokens), attends DraftN+1
+	// tokens, and yields DraftTau tokens on average.
+	DraftTau, DraftOverhead float64
+	DraftN                  int
+	LoadColdS               float64 // from disk
+	LoadWarmS               float64 // from OS page cache
 }
 
 // DecodeSec is seconds to decode one token at context depth d.
@@ -79,7 +84,11 @@ func (t *Timing) DecodeSec(d int) float64 {
 	if attn <= 0 {
 		attn = t.EffBandwidth
 	}
-	sec := t.WeightsBytesPerTok/t.EffBandwidth + t.Model.KVReadBytes(d, t.KVElem)/attn + t.T0
+	weights, kv := t.WeightsBytesPerTok/t.EffBandwidth, t.Model.KVReadBytes(d, t.KVElem)/attn
+	sec := weights + kv + t.T0
+	if t.DraftTau > 0 {
+		sec = (weights*(1+t.DraftOverhead) + kv*float64(t.DraftN+1) + t.T0) / t.DraftTau
+	}
 	return sec / t.DecodeMult / t.calibrationFactor("decode", d)
 }
 
@@ -516,6 +525,21 @@ func Predict(in Input) Result {
 		AttnFLOPSEff:       pe.attn * flops,
 		DecodeMult:         nz(in.Runtime.Perf.DecodeMult) * nz(in.Model.DecodeEff),
 		PrefillMult:        nz(in.Runtime.Perf.PrefillMult),
+	}
+	// Fitted on the M5 with Qwen3.5 4B writing code, against this model's own
+	// weight and attention terms, so the measured gains come out at both
+	// short and 20K-token contexts.
+	switch q.Draft {
+	case "mtp": // llama.cpp: 1.5× short, 1.1× at 20K; 2.5 tokens a step, 74–77% of drafts accepted
+		tm.DraftTau, tm.DraftOverhead, tm.DraftN = 2.5, 0.89, 2
+		tm.PrefillMult *= 0.9
+		res.Warnings = append(res.Warnings, "MTP drafting: the speed-up was measured once, on code; prose drafts less well")
+		if q.MTP() {
+			res.TuneSteps = append(res.TuneSteps, "--spec-type draft-mtp --spec-draft-n-max 2 (drafts with the file's MTP head)")
+		}
+	case "dflash": // Magnitude: 2.2× llama.cpp short, 1.3× at 20K
+		tm.DraftTau, tm.DraftOverhead, tm.DraftN = 3.5, 0.76, 3
+		res.Warnings = append(res.Warnings, "Magnitude's DFlash drafting: the speed-up was measured on one model, on code; prose drafts less well")
 	}
 	tm.LoadColdS = float64(q.FileBytes)/(t.DiskGBs*1e9) + in.Runtime.Perf.LoadOverheadS
 	tm.LoadWarmS = float64(q.FileBytes)/(15e9) + in.Runtime.Perf.LoadOverheadS
