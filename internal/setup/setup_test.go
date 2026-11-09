@@ -133,6 +133,11 @@ func TestMLXInstallsItsOwnUV(t *testing.T) {
 	if i := slices.Index(ids, "uv"); i < 0 || ids[i+1] != "engine" {
 		t.Fatal(ids)
 	}
+	// Setups saved with uv from PATH still launch.
+	old := basicPlan(Step{ID: "engine", Kind: Install, Package: "mlx-lm", Argv: []string{"uv", "tool", "install", "mlx-lm==0.32.2"}})
+	if err = testExecutor(t).validate(old); err != nil {
+		t.Fatal(err)
+	}
 }
 func testExecutor(t *testing.T) *Executor {
 	t.Helper()

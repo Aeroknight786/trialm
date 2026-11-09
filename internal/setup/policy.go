@@ -148,7 +148,8 @@ func (e *Executor) validate(p Plan) error {
 					actual[0] = "uv"
 				}
 			}
-			if expected == nil || !slices.Equal(expected, actual) {
+			legacy := s.Package == "mlx-lm" && slices.Equal(actual, []string{"uv", "tool", "install", "mlx-lm==0.32.2"}) // setups saved before the pinned uv
+			if !legacy && (expected == nil || !slices.Equal(expected, actual)) {
 				return errors.New("install is not an allowlisted package template")
 			}
 		}
