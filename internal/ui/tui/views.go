@@ -51,7 +51,7 @@ func (m *Root) body() string {
 	case Home:
 		return m.launcher()
 	case Help:
-		return "Keys\n\n↑↓ Model    ⏎ Choose    / Search    v Details\nGrid    ↑↓ File    ←→ Context    c Cache    e Engine\n⏎ Try    s Set up    esc Models\nEsc Back    q Later    ctrl-c Pause"
+		return "Keys\n\n↑↓ Model    ⏎ Choose    / Search    v Details\nGrid    ↑↓ File    ←→ Context    c Cache    e Engine    m MTP\n⏎ Try    s Set up    esc Models\nEsc Back    q Later    ctrl-c Pause"
 	case Gallery:
 		b := "Published claims · unverified by triaLM · never ranked\n"
 		for i, c := range Claims() {

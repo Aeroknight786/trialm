@@ -208,10 +208,10 @@ func TestCompleteCachedShardsAndMLX(t *testing.T) {
 	}
 	model, _ = catalog.Lookup("qwen3-coder:30b")
 	q, _ = model.Quant("MLX-4bit")
-	if model.MLXRepo(q) == "" {
+	if model.FileRepo(q) == "" {
 		t.Fatal("missing fixture model")
 	}
-	base = filepath.Join(home, ".lmstudio", "models", model.MLXRepo(q))
+	base = filepath.Join(home, ".lmstudio", "models", model.FileRepo(q))
 	writeModelFixture(t, filepath.Join(base, "config.json"), []byte(`{"quantization":{"bits":4}}`))
 	if got := cachedModel(home, "", model, q); got != "" {
 		t.Fatal("no weights", got)

@@ -137,10 +137,7 @@ func cachedModel(home, root string, m catalog.Model, q catalog.Quant) string {
 		}
 		hub = filepath.Join(base, "hub")
 	}
-	repo := m.HFGGUFRepo
-	if q.Format == "mlx" {
-		repo = m.MLXRepo(q)
-	}
+	repo := m.FileRepo(q)
 	if repo == "" {
 		return ""
 	}

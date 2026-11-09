@@ -22,11 +22,15 @@
   ],
   "qwen3.5-9b": [
     {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 5950221072, "Repo": "mlx-community/Qwen3.5-9B-MLX-4bit"},
-    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 10426592423, "Repo": "mlx-community/Qwen3.5-9B-MLX-8bit"}
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 10426592423, "Repo": "mlx-community/Qwen3.5-9B-MLX-8bit"},
+    {"Name": "Q4_K_M-MTP", "Format": "gguf", "FileBytes": 5868826976, "ReadBytesPerToken": 5097424896, "FileTag": "Q4_K_M", "Repo": "unsloth/Qwen3.5-9B-MTP-GGUF", "MTP": true},
+    {"Name": "Q8_0-MTP", "Format": "gguf", "FileBytes": 9786061152, "ReadBytesPerToken": 8435845120, "FileTag": "Q8_0", "Repo": "unsloth/Qwen3.5-9B-MTP-GGUF", "MTP": true}
   ],
   "qwen3.5-4b": [
     {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 3034300695, "Repo": "mlx-community/Qwen3.5-4B-MLX-4bit"},
-    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 5136696107, "Repo": "mlx-community/Qwen3.5-4B-MLX-8bit"}
+    {"Name": "MLX-8bit", "Format": "mlx", "FileBytes": 5136696107, "Repo": "mlx-community/Qwen3.5-4B-MLX-8bit"},
+    {"Name": "Q4_K_M-MTP", "Format": "gguf", "FileBytes": 2834975040, "ReadBytesPerToken": 2729969664, "FileTag": "Q4_K_M", "Repo": "unsloth/Qwen3.5-4B-MTP-GGUF", "MTP": true},
+    {"Name": "Q8_0-MTP", "Format": "gguf", "FileBytes": 4610580800, "ReadBytesPerToken": 4471435264, "FileTag": "Q8_0", "Repo": "unsloth/Qwen3.5-4B-MTP-GGUF", "MTP": true}
   ],
   "gemma4-12b": [
     {"Name": "MLX-4bit", "Format": "mlx", "FileBytes": 6741039511, "Repo": "mlx-community/gemma-4-12B-it-4bit"},

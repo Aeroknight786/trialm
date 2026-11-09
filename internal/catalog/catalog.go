@@ -27,12 +27,13 @@ import (
 //go:embed models_gguf.json
 var generatedJSON []byte
 
-// mlxJSON lists each model's MLX builds (one Hugging Face repository per
-// bit width). Sizes are each repository's safetensors total, vision weights
-// included; only builds the pinned mlx-lm can load are listed.
+// filesJSON lists files kept in their own Hugging Face repositories: MLX
+// builds (one repository per bit width; sizes are the safetensors total,
+// vision weights included; only builds the pinned mlx-lm loads) and GGUFs
+// with a multi-token-prediction head (MTP), which llama.cpp drafts with.
 //
-//go:embed models_mlx.json
-var mlxJSON []byte
+//go:embed models_files.json
+var filesJSON []byte
 
 // Quant is one downloadable quantization of a model.
 type Quant struct {
@@ -51,9 +52,13 @@ type Quant struct {
 	// from Name (e.g. "UD-Q4_K_M", "MXFP4_MOE", "Q4_K"); used as
 	// hf.co/<repo>:<tag> by Ollama, llama.cpp and LM Studio.
 	FileTag string `json:",omitempty"`
-	// Repo holds this file when it differs per quant: mlx-community
-	// publishes one repository per bit width.
+	// Repo holds this file when it is not the model's GGUF repository:
+	// mlx-community publishes one repository per bit width, and MTP GGUFs
+	// have their own.
 	Repo string `json:",omitempty"`
+	// MTP is true for a GGUF with a multi-token-prediction head, which
+	// llama.cpp uses to draft tokens (speculative decoding).
+	MTP bool `json:",omitempty"`
 }
 
 // HFTag returns the tag that selects the quant's file on Hugging Face.
@@ -326,9 +331,9 @@ func init() {
 	if err := json.Unmarshal(generatedJSON, &gen); err != nil {
 		panic("catalog: invalid models_gguf.json: " + err.Error())
 	}
-	var mlx map[string][]Quant
-	if err := json.Unmarshal(mlxJSON, &mlx); err != nil {
-		panic("catalog: invalid models_mlx.json: " + err.Error())
+	var files map[string][]Quant
+	if err := json.Unmarshal(filesJSON, &files); err != nil {
+		panic("catalog: invalid models_files.json: " + err.Error())
 	}
 	have := map[string]bool{}
 	for _, m := range models {
@@ -340,12 +345,17 @@ func init() {
 		}
 	}
 	for i := range models {
-		models[i].Quants = append(models[i].Quants, mlx[models[i].ID]...)
+		models[i].Quants = append(models[i].Quants, files[models[i].ID]...)
 	}
 }
 
-// MLXRepo is the repository holding an MLX file, "" when none is known.
-func (m Model) MLXRepo(q Quant) string { return q.Repo }
+// FileRepo is the Hugging Face repository holding q, "" when none is known.
+func (m Model) FileRepo(q Quant) string {
+	if q.Repo != "" || q.Format != "gguf" {
+		return q.Repo
+	}
+	return m.HFGGUFRepo
+}
 
 // All returns catalog models sorted by total size.
 func All() []Model {

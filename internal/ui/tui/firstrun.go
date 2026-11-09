@@ -46,7 +46,7 @@ func (m *Root) pickerKey(key string) tea.Cmd {
 	}
 	if m.gridFocus {
 		switch key {
-		case "up", "down", "left", "right", "c", "e":
+		case "up", "down", "left", "right", "c", "e", "m":
 			m.picker.Models[m.selected].Select(key)
 		case "enter":
 			return m.try(false)

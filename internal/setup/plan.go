@@ -262,6 +262,10 @@ func Build(in Input) (Plan, error) {
 			kvArgs, _ := engine.Args("mlx-kv", values)
 			argv = append(argv, kvArgs...)
 		}
+		if in.Quant.MTP {
+			mtp, _ := engine.Args("llamacpp-mtp", values)
+			argv = append(argv, mtp...)
+		}
 		p.Steps = append(p.Steps, Step{ID: "server", Kind: Start, Title: "Start " + p.RuntimeName, Argv: argv, Env: engineEnv, Health: p.Endpoint + "/health"})
 	case "ollama":
 		values["config"] = "~/.trialm/ollama/" + p.LocalModelName + ".Modelfile"

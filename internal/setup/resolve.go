@@ -60,10 +60,7 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 	if in.LocalModel != "" || len(in.Assets) > 0 {
 		return in, nil
 	}
-	repo := in.Model.HFGGUFRepo
-	if in.Quant.Format == "mlx" {
-		repo = in.Model.MLXRepo(in.Quant)
-	}
+	repo := in.Model.FileRepo(in.Quant)
 	if repo == "" {
 		return in, errors.New("no Hugging Face repository is known for this model")
 	}

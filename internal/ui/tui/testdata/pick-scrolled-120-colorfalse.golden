@@ -12,6 +12,7 @@ Models · 8 of 14
 │ Qwen  Qwen3.5 9B  estimate                                                                                         │
 │ KV cache  [f16] q8_0 q4_0                                                                                          │
 │ Engine    [llama.cpp] MLX                                                                                          │
+│ MTP       [off] on                                                                                                 │
 │                                                                                                                    │
 │ t/s when full       32K                    64K                    128K                   256K                      │
 │ Q4_K_MD             ~12 t/s                ~8.3 t/s               ~5.1 t/s               ~2.9 t/s                  │
@@ -32,4 +33,4 @@ Models · 8 of 14
 │ Memory  ████████████░░░░░░░░  9.98 of 16 GB                                                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-↑↓ File   ←→ Context   c Cache   e Engine   ⏎ Try   s Set up   esc Models
+↑↓ File   ←→ Context   c Cache   e Engine   m MTP   ⏎ Try   s Set up   esc Back

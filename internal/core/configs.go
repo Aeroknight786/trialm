@@ -44,6 +44,7 @@ type ConfigModel struct {
 	MaxContext                  int
 	OnDisk                      bool
 	File, Column, Engine, Cache int
+	MTP                         bool // draft with the files' MTP head (llama.cpp only)
 }
 type ConfigPicker struct {
 	Models   []ConfigModel
@@ -66,7 +67,20 @@ func (m *ConfigModel) Grid() ConfigGrid {
 	if len(m.Engines) == 0 {
 		return ConfigGrid{}
 	}
-	return m.Grids[gridKey(m.Engines[m.Engine].ID, m.CacheTypes[m.Cache])]
+	key := gridKey(m.Engines[m.Engine].ID, m.CacheTypes[m.Cache])
+	if g, ok := m.Grids[key+"/mtp"]; ok && m.MTP {
+		return g
+	}
+	return m.Grids[key]
+}
+
+// HasMTP reports whether the current engine has MTP builds of the files.
+func (m *ConfigModel) HasMTP() bool {
+	if len(m.Engines) == 0 {
+		return false
+	}
+	_, ok := m.Grids[gridKey(m.Engines[m.Engine].ID, m.CacheTypes[m.Cache])+"/mtp"]
+	return ok
 }
 func (m *ConfigModel) Cell() (ConfigCell, bool) {
 	g := m.Grid()
@@ -109,9 +123,11 @@ func (m *ConfigModel) Select(key string) {
 		m.Cache = (m.Cache + 1) % len(m.CacheTypes)
 	case "e":
 		m.Engine = (m.Engine + 1) % len(m.Engines)
+	case "m":
+		m.MTP = !m.MTP
 	}
 	g := m.Grid()
-	if key == "e" || key == "c" {
+	if key == "e" || key == "c" || key == "m" {
 		for i, f := range g.Files {
 			if f.Name == name {
 				m.File = i
@@ -144,6 +160,7 @@ func (m *ConfigModel) Select(key string) {
 }
 func (m *ConfigModel) Reset() {
 	m.Engine, m.Cache, m.File, m.Column = 0, 0, 0, 0
+	m.MTP = m.Default.Result.Quant.MTP
 	for i, e := range m.Engines {
 		if e.ID == m.Default.Result.Runtime.ID {
 			m.Engine = i
@@ -156,7 +173,7 @@ func (m *ConfigModel) Reset() {
 	}
 	g := m.Grid()
 	for i, f := range g.Files {
-		if f.Name == m.Default.Result.Quant.Name {
+		if f.Name == strings.TrimSuffix(m.Default.Result.Quant.Name, "-MTP") {
 			m.File = i
 		}
 	}
@@ -283,6 +300,9 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 			for _, cache := range cm.CacheTypes {
 				g := BuildConfigGrid(row.Result.Model, rt, cache, d.Target, h.Scenario, local, c)
 				cm.Grids[gridKey(rt.ID, cache)] = g
+				if mtp := BuildMTPGrid(row.Result.Model, rt, cache, d.Target, h.Scenario, local, c); len(mtp.Files) > 0 {
+					cm.Grids[gridKey(rt.ID, cache)+"/mtp"] = mtp
+				}
 				cm.MaxContext = max(cm.MaxContext, g.MaxContext)
 				files += len(g.Files)
 			}
@@ -306,17 +326,29 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 	return out, nil
 }
 
-// BuildConfigGrid uses exactly the predictor's memory and depth timing. Each
-// immutable table is cached by model/runtime/cache for the life of a picker.
-// hasFile reports whether the engine has a file it can set up (MLX files
-// need a known repository).
+// hasFile reports whether the engine has a file it can set up.
 func hasFile(m catalog.Model, rt engine.Profile) bool {
-	return slices.ContainsFunc(m.Quants, func(q catalog.Quant) bool {
-		return slices.Contains(rt.Formats, q.Format) && (q.Format != "mlx" || m.MLXRepo(q) != "")
-	})
+	return slices.ContainsFunc(m.Quants, func(q catalog.Quant) bool { return servable(m, q, rt) })
 }
 
+// servable reports whether the engine can set up file q: MLX files need a
+// known repository, and only llama.cpp drafts with an MTP head.
+func servable(m catalog.Model, q catalog.Quant, rt engine.Profile) bool {
+	return slices.Contains(rt.Formats, q.Format) && (q.Format != "mlx" || m.FileRepo(q) != "") && (!q.MTP || rt.ID == "llamacpp")
+}
+
+// BuildConfigGrid uses exactly the predictor's memory and depth timing. Each
+// immutable table is cached by model/runtime/cache for the life of a picker.
 func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict.Target, sc predict.Scenario, local map[string]string, evidence *calib.Calibration) ConfigGrid {
+	return buildGrid(m, rt, cache, t, sc, local, evidence, false)
+}
+
+// BuildMTPGrid is the grid of the same files' MTP builds, under the same names.
+func BuildMTPGrid(m catalog.Model, rt engine.Profile, cache string, t predict.Target, sc predict.Scenario, local map[string]string, evidence *calib.Calibration) ConfigGrid {
+	return buildGrid(m, rt, cache, t, sc, local, evidence, true)
+}
+
+func buildGrid(m catalog.Model, rt engine.Profile, cache string, t predict.Target, sc predict.Scenario, local map[string]string, evidence *calib.Calibration, mtp bool) ConfigGrid {
 	g := ConfigGrid{Contexts: []int{32768, 65536, 131072, 262144}}
 	if m.NativeCtx > 262144 {
 		g.Contexts = append(g.Contexts, m.NativeCtx)
@@ -324,7 +356,7 @@ func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict
 	quants := slices.Clone(m.Quants)
 	sort.SliceStable(quants, func(i, j int) bool { return quants[i].FileBytes > quants[j].FileBytes })
 	for _, q := range quants {
-		if !slices.Contains(rt.Formats, q.Format) || q.Format == "mlx" && m.MLXRepo(q) == "" {
+		if !servable(m, q, rt) || q.MTP != mtp {
 			continue
 		}
 		// Fold only files that cannot fit even the smallest column with any cache.
@@ -333,7 +365,7 @@ func BuildConfigGrid(m catalog.Model, rt engine.Profile, cache string, t predict
 			g.Folded++
 			continue
 		}
-		f := ConfigFile{Name: q.Name, LocalPath: local[q.Name], Size: figure.Bytes(q.FileBytes, "catalog:"+m.ID)}
+		f := ConfigFile{Name: strings.TrimSuffix(q.Name, "-MTP"), LocalPath: local[q.Name], Size: figure.Bytes(q.FileBytes, "catalog:"+m.ID)}
 		for _, depth := range g.Contexts {
 			r := predict.Predict(predict.Input{Model: m, QuantName: q.Name, Runtime: rt, Target: t, Tuned: true, CtxOverride: depth, KVCacheType: cache, Scenario: sc})
 			c := ConfigCell{Row: Row{Result: r, LocalPath: local[q.Name]}, Context: depth, PastNative: depth > m.NativeCtx}
