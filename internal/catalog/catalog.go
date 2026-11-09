@@ -27,10 +27,12 @@ import (
 //go:embed models_gguf.json
 var generatedJSON []byte
 
-// filesJSON lists files kept in their own Hugging Face repositories: MLX
-// builds (one repository per bit width; sizes are the safetensors total,
-// vision weights included; only builds the pinned mlx-lm loads) and GGUFs
-// with a multi-token-prediction head (MTP), which llama.cpp drafts with.
+// filesJSON lists files beyond the model's GGUF repository: MLX builds (one
+// repository per bit width; sizes are the safetensors total, vision weights
+// included; only builds the pinned mlx-lm loads), GGUFs with a
+// multi-token-prediction head (MTP), which llama.cpp drafts with, and
+// Magnitude catalog models (sizes and drafters from `magnitude catalog show
+// --json`, 0.2.17; reads per token from the matching GGUF).
 //
 //go:embed models_files.json
 var filesJSON []byte
@@ -39,7 +41,8 @@ var filesJSON []byte
 type Quant struct {
 	// Name, e.g. "Q4_K_M", "Q8_0", "MXFP4", "MLX-4bit".
 	Name string
-	// Format is "gguf" or "mlx".
+	// Format is "gguf", "mlx" or "magnitude" (a Magnitude catalog model,
+	// whose Repo is its model id).
 	Format string
 	// FileBytes is the download size (and resident weight size).
 	FileBytes int64
@@ -56,9 +59,10 @@ type Quant struct {
 	// mlx-community publishes one repository per bit width, and MTP GGUFs
 	// have their own.
 	Repo string `json:",omitempty"`
-	// MTP is true for a GGUF with a multi-token-prediction head, which
-	// llama.cpp uses to draft tokens (speculative decoding).
-	MTP bool `json:",omitempty"`
+	// Draft names how the engine drafts tokens with this file (speculative
+	// decoding): "mtp" for a multi-token-prediction head, or a drafter
+	// Magnitude ships ("dflash", "dspark").
+	Draft string `json:",omitempty"`
 }
 
 // HFTag returns the tag that selects the quant's file on Hugging Face.
@@ -348,6 +352,9 @@ func init() {
 		models[i].Quants = append(models[i].Quants, files[models[i].ID]...)
 	}
 }
+
+// MTP reports whether q is a GGUF with an MTP head for llama.cpp to draft with.
+func (q Quant) MTP() bool { return q.Draft == "mtp" && q.Format == "gguf" }
 
 // FileRepo is the Hugging Face repository holding q, "" when none is known.
 func (m Model) FileRepo(q Quant) string {

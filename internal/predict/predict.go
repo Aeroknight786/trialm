@@ -526,11 +526,20 @@ func Predict(in Input) Result {
 		DecodeMult:         nz(in.Runtime.Perf.DecodeMult) * nz(in.Model.DecodeEff),
 		PrefillMult:        nz(in.Runtime.Perf.PrefillMult),
 	}
-	if q.MTP { // measured on the M5 with Qwen3.5 4B writing code: 2.5 tokens per step, 74–77% of drafts accepted
-		tm.DraftTau, tm.DraftOverhead, tm.DraftN = 2.5, 0.72, 2
+	// Fitted on the M5 with Qwen3.5 4B writing code, against this model's own
+	// weight and attention terms, so the measured gains come out at both
+	// short and 20K-token contexts.
+	switch q.Draft {
+	case "mtp": // llama.cpp: 1.5× short, 1.1× at 20K; 2.5 tokens a step, 74–77% of drafts accepted
+		tm.DraftTau, tm.DraftOverhead, tm.DraftN = 2.5, 0.89, 2
 		tm.PrefillMult *= 0.9
 		res.Warnings = append(res.Warnings, "MTP drafting: the speed-up was measured once, on code; prose drafts less well")
-		res.TuneSteps = append(res.TuneSteps, "--spec-type draft-mtp --spec-draft-n-max 2 (drafts with the file's MTP head)")
+		if q.MTP() {
+			res.TuneSteps = append(res.TuneSteps, "--spec-type draft-mtp --spec-draft-n-max 2 (drafts with the file's MTP head)")
+		}
+	case "dflash": // Magnitude: 2.2× llama.cpp short, 1.3× at 20K
+		tm.DraftTau, tm.DraftOverhead, tm.DraftN = 3.5, 0.76, 3
+		res.Warnings = append(res.Warnings, "Magnitude's DFlash drafting: the speed-up was measured on one model, on code; prose drafts less well")
 	}
 	tm.LoadColdS = float64(q.FileBytes)/(t.DiskGBs*1e9) + in.Runtime.Perf.LoadOverheadS
 	tm.LoadWarmS = float64(q.FileBytes)/(15e9) + in.Runtime.Perf.LoadOverheadS

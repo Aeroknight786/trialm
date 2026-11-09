@@ -57,7 +57,7 @@ func Resolve(ctx context.Context, in Input, token string) (Input, error) {
 		}
 		in.Calibrate = prefs.Calibrate && !calib.Current(ctx, root, engine.SharedBinary(root, "llama-bench", in.OS))
 	}
-	if in.LocalModel != "" || len(in.Assets) > 0 {
+	if in.LocalModel != "" || len(in.Assets) > 0 || in.Quant.Format == "magnitude" {
 		return in, nil
 	}
 	repo := in.Model.FileRepo(in.Quant)

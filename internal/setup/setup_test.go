@@ -139,6 +139,31 @@ func TestMLXInstallsItsOwnUV(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestMagnitudeInstallsServesAndPulls(t *testing.T) {
+	in := fixture(t)
+	in.Profile, _ = engine.Get("magnitude")
+	in.OS, in.Arch, in.Backend = "darwin", "arm64", "metal"
+	in.Quant = catalog.Quant{Name: "Q4", Format: "magnitude", FileBytes: 4 << 30, Repo: "qwen3.5-4b:gguf:q4", Draft: "dflash"}
+	in.Assets = nil
+	p, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = testExecutor(t).validate(p); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, s := range p.Steps {
+		ids = append(ids, s.ID)
+	}
+	if p.Endpoint != "http://127.0.0.1:10100/inference" || p.LocalModelName != "qwen3.5-4b:gguf:q4" || !slices.Equal(ids[:3], []string{"engine", "server", "register"}) {
+		t.Fatal(p.Endpoint, p.LocalModelName, ids)
+	}
+	bad := basicPlan(Step{ID: "register", Kind: Install, Package: "magnitude-model", Argv: []string{"magnitude", "catalog", "pull", "--force"}})
+	if testExecutor(t).validate(bad) == nil {
+		t.Fatal("pull accepted a flag as the model id")
+	}
+}
 func testExecutor(t *testing.T) *Executor {
 	t.Helper()
 	home := t.TempDir()

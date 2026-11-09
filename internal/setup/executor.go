@@ -441,7 +441,11 @@ func (e *Executor) run(ctx context.Context, s Step, j *Journal, i int, path stri
 			}
 		}
 		if len(s.Argv) > 0 {
-			return e.command(ctx, e.expandArgs(j.effectiveArgs(s.Argv)), e.expandArgs(j.effectiveArgs(s.Env)), logPath, u)
+			argv, env := e.expandArgs(j.effectiveArgs(s.Argv)), e.expandArgs(j.effectiveArgs(s.Env))
+			if err := e.command(ctx, argv, env, logPath, u); err != nil || s.Package != "magnitude-model" {
+				return err
+			}
+			return e.awaitMagnitude(ctx, argv, env, r, u)
 		}
 		return nil
 	case Write:
@@ -683,4 +687,56 @@ func (e *Executor) SaveReport(slug string, r verify.Report) error {
 	}
 	j.Report = &r
 	return save(path, &j)
+}
+
+// awaitMagnitude waits for Magnitude's background download of the model
+// that `magnitude catalog pull` started, showing its progress.
+func (e *Executor) awaitMagnitude(ctx context.Context, pull, env []string, r *Record, u Update) error {
+	for {
+		cmd := exec.CommandContext(ctx, pull[0], "models", "status", pull[3], "--json")
+		cmd.Env = append(os.Environ(), env...)
+		out, err := cmd.Output()
+		var st struct {
+			Model struct {
+				StorageBytes     int64
+				AcquisitionState struct {
+					Tag          string `json:"_tag"`
+					Installation struct{ InstalledBytes int64 }
+					Progress     struct {
+						Stage            string
+						Completed, Total int64
+					}
+				}
+			}
+		}
+		if err == nil {
+			err = json.Unmarshal(out, &st)
+		}
+		a := st.Model.AcquisitionState
+		switch {
+		case err != nil:
+			return fmt.Errorf("magnitude models status: %w", err)
+		case a.Tag == "Installed":
+			return nil
+		case strings.Contains(a.Tag, "Fail") || strings.Contains(a.Tag, "Cancel"):
+			return fmt.Errorf("Magnitude could not download %s (%s)", pull[3], a.Tag)
+		}
+		p := download.Progress{Done: a.Installation.InstalledBytes, Total: st.Model.StorageBytes}
+		if a.Tag == "Optimizing" { // after the download, it tunes kernels for this machine
+			u.Lines = []string{"Magnitude is tuning its kernels for this Mac (" + a.Progress.Stage + ")"}
+			e.emit("setup_log", u)
+		} else if a.Progress.Total > 0 {
+			p.Done, p.Total = a.Progress.Completed, a.Progress.Total
+		}
+		e.mu.Lock()
+		r.Progress = p
+		e.mu.Unlock()
+		u.Progress = &p
+		e.emit("setup_progress", u)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
 }

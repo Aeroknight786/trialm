@@ -11,7 +11,7 @@ Models · 8 of 14
 ╭────────────────────────────────────────────────────────────────────────────╮
 │ Qwen  Qwen3.5 9B  estimate                                                 │
 │ KV cache  f16 [q8_0] q4_0                                                  │
-│ Engine    [llama.cpp] MLX                                                  │
+│ Engine    [llama.cpp] MLX Magnitude                                        │
 │ MTP       [off] on                                                         │
 │                                                                            │
 │ t/s when full       32K          64K          128K         256K            │

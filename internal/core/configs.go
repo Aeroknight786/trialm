@@ -160,7 +160,7 @@ func (m *ConfigModel) Select(key string) {
 }
 func (m *ConfigModel) Reset() {
 	m.Engine, m.Cache, m.File, m.Column = 0, 0, 0, 0
-	m.MTP = m.Default.Result.Quant.MTP
+	m.MTP = m.Default.Result.Quant.MTP()
 	for i, e := range m.Engines {
 		if e.ID == m.Default.Result.Runtime.ID {
 			m.Engine = i
@@ -279,8 +279,8 @@ func (s Session) Picker(ctx context.Context, d Detection, p store.Preferences, o
 			continue
 		}
 		cm := ConfigModel{MinContext: predict.MinContext(h.Scenario), Default: row, CacheTypes: []string{"f16", "q8_0", "q4_0"}, Grids: map[string]ConfigGrid{}}
-		for _, rt := range engine.All() { // setup installs llama.cpp and mlx-lm itself
-			if rt.ID != "llamacpp" && rt.ID != "mlx-lm" && !l.Installed.Has(rt.ID) || !hasFile(row.Result.Model, rt) {
+		for _, rt := range engine.All() { // setup installs llama.cpp, mlx-lm and Magnitude itself
+			if !slices.Contains([]string{"llamacpp", "mlx-lm", "magnitude"}, rt.ID) && !l.Installed.Has(rt.ID) || !hasFile(row.Result.Model, rt) {
 				continue
 			}
 			probe := predict.Predict(predict.Input{Model: row.Result.Model, Runtime: rt, Target: d.Target, Tuned: true, Scenario: h.Scenario})
@@ -331,10 +331,11 @@ func hasFile(m catalog.Model, rt engine.Profile) bool {
 	return slices.ContainsFunc(m.Quants, func(q catalog.Quant) bool { return servable(m, q, rt) })
 }
 
-// servable reports whether the engine can set up file q: MLX files need a
-// known repository, and only llama.cpp drafts with an MTP head.
+// servable reports whether the engine can set up file q: MLX and Magnitude
+// files need a known repository or id, and only llama.cpp drafts with an
+// MTP head.
 func servable(m catalog.Model, q catalog.Quant, rt engine.Profile) bool {
-	return slices.Contains(rt.Formats, q.Format) && (q.Format != "mlx" || m.FileRepo(q) != "") && (!q.MTP || rt.ID == "llamacpp")
+	return slices.Contains(rt.Formats, q.Format) && (q.Format == "gguf" || m.FileRepo(q) != "") && (!q.MTP() || rt.ID == "llamacpp")
 }
 
 // BuildConfigGrid uses exactly the predictor's memory and depth timing. Each
@@ -356,7 +357,7 @@ func buildGrid(m catalog.Model, rt engine.Profile, cache string, t predict.Targe
 	quants := slices.Clone(m.Quants)
 	sort.SliceStable(quants, func(i, j int) bool { return quants[i].FileBytes > quants[j].FileBytes })
 	for _, q := range quants {
-		if !servable(m, q, rt) || q.MTP != mtp {
+		if !servable(m, q, rt) || q.MTP() != mtp {
 			continue
 		}
 		// Fold only files that cannot fit even the smallest column with any cache.
